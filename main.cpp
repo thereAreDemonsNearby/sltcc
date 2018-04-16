@@ -217,7 +217,7 @@ void testSimpleProgram()
                                "}");
 }
 
-void printSema(std::string str)
+void printSema(std::string str, bool correct)
 {
     static int count = 0;
     ++count;
@@ -239,6 +239,9 @@ void printSema(std::string str)
     if (errli.begin() == errli.end()) {
         std::cout << "Ok" << std::endl;
     }
+
+    assert(correct == (errli.begin() == errli.end()));
+
     for (auto it = errli.begin(); it != errli.end(); ++it) {
         int line = it->token()->context().linum;
         std::cout << "line " << line << ": " << it->what() << std::endl;
@@ -248,85 +251,81 @@ void printSema(std::string str)
 void testSema()
 {
     printSema("struct Rec\n"
-                      "{ int a; float b; double c; };\n"
-                      "int main() {\n"
-                      "Rec r;\n"
-                      "int a;\n"
-                      "a = r.b;\n"
-                      "}");
+                          "{ int a; float b; double c; };\n"
+                          "int main() {\n"
+                          "Rec r;\n"
+                          "int a;\n"
+                          "a = r.b;\n"
+                          "}", false);
     printSema("int main() {\n"
-                      "int const cv = 32;\n"
-                      "int* ptr = &cv;\n}");
+                          "int const cv = 32;\n"
+                          "int* ptr = &cv;\n}", false);
     printSema("int main() {\n"
-                      "int const cv = 32;\n"
-                      "int const* cp = &cv;\n}");
+                          "int const cv = 32;\n"
+                          "int const* cp = &cv;\n}", true);
     printSema("int main() {\n"
-                      "if (2.2) {} \n}");
+                          "if (2.2) {} \n}", false);
     printSema("int main() {\n"
-                      "if (2) {} }");
-    printSema("int main() { while (\"hahaha\") {} }");
-    printSema("int main() { char ch; const char* p; p = &ch; *p = 'a'; }");
-    printSema("int main() { char ch; char* const p; p = &ch; }");
-    printSema("int main() { char ch; char* const p = &ch; *p = 'a'; }");
-    printSema("int main() { int arr[32]; arr[1] = 32; }");
-    printSema("int main() { const int arr[32]; arr[1] = 32; }");
-    printSema("int main() { const int arr[32][43]; arr[1] = 32; }");
-    printSema("int main() { const int arr[32][43]; arr[1][2] = 44; }");
-    printSema("char func() { return 2; }");
-    printSema("char func() { return (char)2; }");
-    printSema("char* func() { char ch; return &ch; }");
-    printSema("int main() { void a; }");
+                          "if (2) {} }", true);
+    printSema("int main() { while (\"hahaha\") {} }", true);
+    printSema("int main() { char ch; const char* p; p = &ch; *p = 'a'; }", false);
+    printSema("int main() { char ch; char* const p; p = &ch; }", false);
+    printSema("int main() { char ch; char* const p = &ch; *p = 'a'; }", true);
+    printSema("int main() { int arr[32]; arr[1] = 32; }", true);
+    printSema("int main() { const int arr[32]; arr[1] = 32; }", false);
+    printSema("int main() { const int arr[32][43]; arr[1] = 32; }", false);
+    printSema("int main() { const int arr[32][43]; arr[1][2] = 44; }", false);
+    printSema("char func() { return 2; }", false);
+    printSema("char func() { return (char)2; }", true);
+    printSema("char* func() { char ch; return &ch; }", true);
+    printSema("int main() { void a; }", false);
     printSema("struct Point;"
-                      "int main() { Point p; }");
+                          "int main() { Point p; }", false);
     printSema("struct Point;"
-                      "int main() { Point* p; }");
-    printSema("int main() { unsigned int a = 2; }");
-    printSema("int main() { int (*ap)[33]; int (*bp)[22]; bp = ap; }");
-    printSema("int main() { int (*ap)[33]; int (*bp)[33]; bp = ap; }");
-    printSema("int main() { const int (*ap)[33]; int (*bp)[33]; bp = ap; }");
-    printSema("struct a { }; struct a { };");
+                          "int main() { Point* p; }", true);
+    printSema("int main() { unsigned int a = 2; }", true);
+    printSema("int main() { int (*ap)[33]; int (*bp)[22]; bp = ap; }", false);
+    printSema("int main() { int (*ap)[33]; int (*bp)[33]; bp = ap; }", true);
+    printSema("int main() { const int (*ap)[33]; int (*bp)[33]; bp = ap; }", false);
+    printSema("struct a { }; struct a { };", false);
     printSema("struct a { int a; }; struct b { int a; }; "
-                      "int main() { a x; b y; x = y; }");
-    printSema("struct a { int a; }; struct b { int a; }; "
-                      "int main() { a x; a y; x = y; }");
-    printSema("struct S; S* sp; struct S {}; int main() { S s; sp = &s; }");//
-    printSema("int main() { const int arr[32]; int* const p = arr; }");
-    printSema("int main() { const int arr[32]; const int* p = arr; }");
-    printSema("int main() { int arr[32]; int* p = arr; }");
-    printSema("int main() { int* p = 1; }");
-    printSema("int main() { int* p = 0; }");
-    printSema("int main() { int arr[32][32]; arr[1][2][3]; }");
-    printSema("int main() { int arr[32][32]; arr[1][2]; }");
-    printSema("int main() { int** pp; *pp = 32; }");
-    printSema("int main() { int** pp; **pp = 32; }");
-    printSema("int main() { int* const* pp; int b; *pp = &b; }");
-    printSema("int main() { int* const* pp; int b; **pp = b; }");
-    printSema("int main() { int (*arrp)[32][32]; const int arr[32][32]; arrp = &arr;}");
+                          "int main() { a x; b y; x = y; }", false);
+    printSema("struct S; S* sp; struct S {}; int main() { S s; sp = &s; }", true);//
+    printSema("int main() { const int arr[32]; int* const p = arr; }", false);
+    printSema("int main() { const int arr[32]; const int* p = arr; }", true);
+    printSema("int main() { int arr[32]; int* p = arr; }", true);
+    printSema("int main() { int* p = 1; }", false);
+    printSema("int main() { int* p = 0; }", true);
+    printSema("int main() { int arr[32][32]; arr[1][2][3]; }", false);
+    printSema("int main() { int arr[32][32]; arr[1][2]; }", true);
+    printSema("int main() { int** pp; *pp = 32; }", false);
+    printSema("int main() { int** pp; **pp = 32; }", true);
+    printSema("int main() { int* const* pp; int b; *pp = &b; }", false);
+    printSema("int main() { int* const* pp; int b; **pp = b; }", true);
+    printSema("int main() { int (*arrp)[32][32]; const int arr[32][32]; arrp = &arr;}", false);
 
-    printSema("int main() { const int (*arrp)[32][32]; int arr[32][32]; arrp = &arr;}");
-    printSema("int main() { int (*arrp)[32][32]; const int arr[32][32]; arrp = &arr;}");
-
-    printSema("int main() { int* p; *(p + 1) = 3; }");
-    printSema("int main() { int** p; *(*(p+1)+2) = 3; }");
-    printSema("int main() { int** p; p[1][2] = 3; }");
-    printSema("int main() { int a; double b; int c = a + b; }");
-    printSema("int main() { int a; double b; double c = a + b; }");
-    printSema("int fn() {} int main() { fn() = 3; }");
-    printSema("int* fn() {} int main() { *fn() = 3; }");
-    printSema("int main() { int a; unsigned char b; while (a > b) {} }");
-    printSema("int main() { int a; unsigned char b; while (a != b) {} }");
-    printSema("int main() { int a = 2.2 << 3; }");
-    printSema("int main() { int a = 2 << 3; }");
-    printSema("void func(char* str); int main() { func(\"woaini\"); }");
-    printSema("void func(char const* str); int main() { func(\"woaini\"); }");
-    printSema("int printf(const char*); int main() { printf(\"%d%c\", 21, 'a'); }");
-    printSema("int printf(const char*, ...); int main() { printf(\"%d%c\", 21, 'a'); }");
-    printSema("int haha(int a, int b); int main() { haha(1); }");
-    printSema("int haha(int a, int b); int main() { haha(1, 2+3); }");
+    printSema("int main() { const int (*arrp)[32][32]; int arr[32][32]; arrp = &arr;}", true);
+    printSema("int main() { int* p; *(p + 1) = 3; }", true);
+    printSema("int main() { int** p; *(*(p+1)+2) = 3; }", true);
+    printSema("int main() { int** p; p[1][2] = 3; }", true);
+    printSema("int main() { int a; double b; int c = a + b; }", false);
+    printSema("int main() { int a; double b; double c = a + b; }", true);
+    printSema("int fn() {} int main() { fn() = 3; }", false);
+    printSema("int* fn() {} int main() { *fn() = 3; }", true);
+    printSema("int main() { int a; unsigned char b; while (a > b) {} }", true);
+    printSema("int main() { int a; unsigned char b; while (a != b) {} }", true);
+    printSema("int main() { int a = 2.2 << 3; }", false);
+    printSema("int main() { int a = 2 << 3; }", true);
+    printSema("void func(char* str); int main() { func(\"woaini\"); }", false);
+    printSema("void func(char const* str); int main() { func(\"woaini\"); }", true);
+    printSema("int printf(const char*); int main() { printf(\"%d%c\", 21, 'a'); }", false);
+    printSema("int printf(const char*, ...); int main() { printf(\"%d%c\", 21, 'a'); }", true);
+    printSema("int haha(int a, int b); int main() { haha(1); }", false);
+    printSema("int haha(int a, int b); int main() { haha(1, 2+3); }", true);
     printSema("struct A { int val; A* next; };\n"
-                      "struct B { A a; double b; };\n"
-                      "int main() { A x; B y; y.b = 2.2; y.a.val = 3; y.a.next = &x; }");
-    printSema("int main() { int const* const* p; int* const* q; p = q; }"); // TODO this is wrong too(maybe not wrong)
+                          "struct B { A a; double b; };\n"
+                          "int main() { A x; B y; y.b = 2.2; y.a.val = 3; y.a.next = &x; }", true);
+    printSema("int main() { int const* const* p; int* const* q; p = q; }", false);
 }
 
 void printCompoundLayout(std::string text, int cnt)

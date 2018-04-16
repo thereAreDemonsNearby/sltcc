@@ -348,9 +348,8 @@ void ArrayRefExpr::accept(Visitor& v)
     v.visit(this);
 }
 
-ArrayRefExpr::ArrayRefExpr(const Token* tok, std::shared_ptr<Expr> head,
-                           std::vector<std::shared_ptr<Expr>>&& indexes)
-        : Expr(tok), head_(std::move(head)), indexes_(indexes)
+ArrayRefExpr::ArrayRefExpr(const Token* tok, std::shared_ptr<Expr> head, std::shared_ptr<Expr> index)
+        : Expr(tok), head_(std::move(head)), index_(std::move(index))
 {
     tag_ = ExprTag::ArrayRef;
 }

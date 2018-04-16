@@ -10,7 +10,10 @@ void ParenfulPrinter::visit(IfStmt* node)
     cout << "\n(then\n";
     node->then_->accept(*this);
     cout << ")\n(else ";
-    node->else_->accept(*this);
+    if (node->else_)
+        node->else_->accept(*this);
+    else
+        cout << "(empty)";
     cout << "))\n";
 }
 
@@ -154,10 +157,7 @@ void ParenfulPrinter::visit(ArrayRefExpr* node)
     cout << "(arrref: ";
     node->head_->accept(*this);
     cout << " ";
-    for (auto& item : node->indexes_) {
-        item->accept(*this);
-        cout << " ";
-    }
+    node->index_->accept(*this);
     cout << ")\n";
 }
 

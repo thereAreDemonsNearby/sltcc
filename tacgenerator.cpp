@@ -231,12 +231,6 @@ void FuncGenerator::visit(SizeofExpr* node)
     vg.visit(node);
 }
 
-void FuncGenerator::visit(EmptyExpr* node)
-{
-    ValueGenerator vg(*this);
-    vg.visit(node);
-}
-
 void FuncGenerator::visit(ReturnStmt* node)
 {
     // TODO  struct type
@@ -745,7 +739,40 @@ void ValueGenerator::visit(MemberExpr* node)
 
 void ValueGenerator::visit(ArrayRefExpr* node)
 {
+    assert(not node->head_->promotedTo);
 
+    ValueGenerator idxGen(mainGenerator_);
+    node->index_->accept(idxGen);
+    auto index = idxGen.value();
+
+    if (node->head_->evalType->tag() == Type::Pointer) {
+        ValueGenerator vg(mainGenerator_);
+        node->head_->accept(vg);
+        auto ptrType = static_cast<PointerType*>(node->head_->evalType);
+        auto biase = ptrType->base()->width();
+        auto offset = nextReg();
+        reg_ = nextReg();
+        emit({Tac::Mul, index, biase, offset});
+        if (ptrType->base()->tag() == Type::Array) {
+            emit({Tac::Add, vg.value(), offset, reg_});
+        } else {
+            emit({Tac::Loadrr, vg.value(), offset, reg_});
+        }
+    } else {
+        assert(node->head_->evalType->tag() == Type::Array);
+        ValueGenerator vg(mainGenerator_);
+        node->head_->accept(vg);
+        auto arrType = static_cast<ArrayType*>(node->head_->evalType);
+        auto biase = arrType->base()->width();
+        auto offset = nextReg();
+        reg_ = nextReg();
+        emit({Tac::Mul, index, biase, offset});
+        if (arrType->base()->tag() == Type::Array) {
+            emit({Tac::Add, vg.value(), offset, reg_});
+        } else {
+            emit({Tac::Loadrr, vg.value(), offset, reg_});
+        }
+    }
 }
 
 void ValueGenerator::visit(VarExpr* node)
@@ -838,25 +865,29 @@ void ValueGenerator::visit(LiteralExpr* node)
 
 void LValueGenerator::visit(ArrayRefExpr* node)
 {
-    LValueGenerator arrBaseGen(mainGenerator_);
-    node->head_->accept(arrBaseGen);
-    //assert(arrBaseGen.inMemory());
-    auto baseAddr = arrBaseGen.addr();
+    assert(not node->head_->promotedTo);
 
-    std::shared_ptr<Type> currType = node->head_->evalType;
-    Tac::Reg result = baseAddr;
-    for (auto& index : node->indexes_) {
+    ValueGenerator idxGen(mainGenerator_);
+    node->index_->accept(idxGen);
+    auto index = idxGen.value();
+
+    if (node->head_->evalType->tag() == Type::Pointer) {
+        // get pointer value
         ValueGenerator vg(mainGenerator_);
-        index->accept(vg);
-        Tac::Reg indexVal = vg.value();
-        if (currType->tag() == Type::Array) {
-            // result = result + index * arrayElementSize
-            currType = static_cast<ArrayType*>(currType.get())->base();
-            emit({Tac::Mul, indexVal, currType->width(), indexVal});
-            emit({Tac::Add, result, indexVal, result});
-        } else if (currType->tag() == Type::Pointer) {
-            currType = static_cast<PointerType*>(currType.get())->base();
-
-        }
+        node->head_->accept(vg);
+        auto biase = static_cast<PointerType*>(node->head_->evalType)->base()->width();
+        auto offset = nextReg();
+        addr_ = nextReg();
+        emit({Tac::Mul, index, biase, offset});
+        emit({Tac::Add, vg.value(), offset, addr_});
+    } else {
+        assert(node->head_->evalType->tag() == Type::Array);
+        ValueGenerator vg(mainGenerator_);
+        node->head_->accept(vg);
+        auto biase = static_cast<ArrayType*>(node->head_->evalType)->base()->width();
+        auto offset = nextReg();
+        addr_ = nextReg();
+        emit({Tac::Mul, index, biase, offset});
+        emit({Tac::Add, vg.value(), offset, addr_});
     }
 }

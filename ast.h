@@ -476,11 +476,11 @@ class ArrayRefExpr final : public Expr
 public:
     void accept(Visitor&) override;
 
-    ArrayRefExpr(const Token*, std::shared_ptr<Expr>, std::vector<std::shared_ptr<Expr>>&&);
+    ArrayRefExpr(const Token*, std::shared_ptr<Expr>, std::shared_ptr<Expr>);
 
 private:
     std::shared_ptr<Expr> head_;
-    std::vector<std::shared_ptr<Expr>> indexes_;
+    std::shared_ptr<Expr> index_;
 };
 
 // single variable

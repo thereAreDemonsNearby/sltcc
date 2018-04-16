@@ -63,7 +63,8 @@ public:
     void visit(CastExpr* node) override;
     void visit(LiteralExpr* node) override;
     void visit(SizeofExpr* node) override;
-    void visit(EmptyExpr* node) override;
+
+    void visit(EmptyExpr* node) override {};
 
 
     void visit(CompoundDecl*) override {}

@@ -14,7 +14,8 @@ void TypeChecker::visit(IfStmt* node)
     node->cond_->accept(*this);
     checkAsCond(node->cond_);
     node->then_->accept(*this);
-    node->else_->accept(*this);
+    if (node->else_)
+        node->else_->accept(*this);
 }
 
 void TypeChecker::visit(WhileStmt* node)
@@ -338,30 +339,23 @@ void TypeChecker::visit(MemberExpr* node)
 
 void TypeChecker::visit(ArrayRefExpr* node)
 {
-    /*auto ent = currScope().find(node->name_);
-    if (!ent) {
-        throw Error(node->tok(), std::string("there is no variable called ") + node->name_);
-    }
-
-    auto ty = ent->type;*/
     node->head_->accept(*this);
     auto& ty = node->head_->evalType;
     if (ty->tag() == Type::Array
         || ty->tag() == Type::Pointer) {
 
-        auto ret = checkArrayRef(node->tok(), ty,
-                                 node->indexes_.begin(), node->indexes_.end());
-        node->evalType = ret;
+        if (ty->tag() == Type::Array) {
+            auto arrTy = static_cast<ArrayType*>(ty.get());
+            node->evalType = arrTy->base();
+        } else {
+            auto ptrTy = static_cast<PointerType*>(ty.get());
+            node->evalType = ptrTy->base();
+        }
+
         node->isLValue = true;
 
-        /*node->isLValue = true;
-        node->isConst = ret->isConst();
-        node->evalType = ret->typeCode();
-        if (ret->tag() != Type::Tag::BuiltIn) {
-            node->complexType = ret;
-        }*/
     } else {
-        throw Error(node->tok(), "use of [] is illegal");
+        throw Error(node->tok(), "operator[]: expect array or pointer");
     }
 }
 

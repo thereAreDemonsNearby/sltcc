@@ -783,18 +783,16 @@ std::shared_ptr<Expr> Parser::parsePostfix(std::shared_ptr<Expr> prev)
 
     } else if (tokens_.peek().type() == Token::LBracket) {
         // a[2][3]
-        auto bracketTok = &tokens_.peek();
-        std::vector<std::shared_ptr<Expr>> subscripts;
+        ret = prev;
         while (tokens_.peek().type() == Token::LBracket) {
+            auto bracketTok = &tokens_.peek();
             tokens_.next();
-            subscripts.push_back(parseExpr());
+            ret = std::make_shared<ArrayRefExpr>(bracketTok, std::move(ret), parseExpr());
             if (tokens_.peek().type() != Token::RBracket) {
                 throw Error(&tokens_.peek(), "miss ']' in array reference");
             }
             tokens_.next();
         }
-
-        ret = std::make_shared<ArrayRefExpr>(bracketTok, prev, std::move(subscripts));
     } else if (tokens_.peek().type() == Token::Operator &&
                     (tokens_.peek().getOperator() == Token::Dot ||
                      tokens_.peek().getOperator() == Token::Arrow)) {
@@ -1199,7 +1197,7 @@ std::shared_ptr<IfStmt> Parser::parseIfStmt()
     } else {
         // no else
         return std::make_shared<IfStmt>(&ifTok, cond, thenClause,
-                                        /** no use arg */std::make_shared<EmptyExpr>(&tokens_.peek()));
+                                        /** no use arg */nullptr);
     }
 }
 
