@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6"/>
+	<Project>
+		<Option title="sltcc"/>
+		<Option makefile_is_custom="1"/>
+		<Option compiler="gcc"/>
+		<Option virtualFolders="CMake Files\;"/>
+		<Build>
+			<Target title="all">
+				<Option working_dir="/home/shiletong/codes/learncompiler/labs/sltcc/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/gmake -j4 -f &quot;/home/shiletong/codes/learncompiler/labs/sltcc/cmake-build-debug/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/usr/bin/gmake -j4 -f &quot;/home/shiletong/codes/learncompiler/labs/sltcc/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/gmake -j4 -f &quot;/home/shiletong/codes/learncompiler/labs/sltcc/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/gmake -j4 -f &quot;/home/shiletong/codes/learncompiler/labs/sltcc/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="rebuild_cache">
+				<Option working_dir="/home/shiletong/codes/learncompiler/labs/sltcc/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/gmake -j4 -f &quot;/home/shiletong/codes/learncompiler/labs/sltcc/cmake-build-debug/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<CompileFile command="/usr/bin/gmake -j4 -f &quot;/home/shiletong/codes/learncompiler/labs/sltcc/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/gmake -j4 -f &quot;/home/shiletong/codes/learncompiler/labs/sltcc/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/gmake -j4 -f &quot;/home/shiletong/codes/learncompiler/labs/sltcc/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="edit_cache">
+				<Option working_dir="/home/shiletong/codes/learncompiler/labs/sltcc/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/gmake -j4 -f &quot;/home/shiletong/codes/learncompiler/labs/sltcc/cmake-build-debug/Makefile&quot;  VERBOSE=1 edit_cache"/>
+					<CompileFile command="/usr/bin/gmake -j4 -f &quot;/home/shiletong/codes/learncompiler/labs/sltcc/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/gmake -j4 -f &quot;/home/shiletong/codes/learncompiler/labs/sltcc/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/gmake -j4 -f &quot;/home/shiletong/codes/learncompiler/labs/sltcc/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="sltcc">
+				<Option output="/home/shiletong/codes/learncompiler/labs/sltcc/cmake-build-debug/sltcc" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/shiletong/codes/learncompiler/labs/sltcc/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/usr/lib/gcc/x86_64-redhat-linux/7/../../../../include/c++/7"/>
+					<Add directory="/usr/lib/gcc/x86_64-redhat-linux/7/../../../../include/c++/7/x86_64-redhat-linux"/>
+					<Add directory="/usr/lib/gcc/x86_64-redhat-linux/7/../../../../include/c++/7/backward"/>
+					<Add directory="/usr/lib/gcc/x86_64-redhat-linux/7/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/gmake -j4 -f &quot;/home/shiletong/codes/learncompiler/labs/sltcc/cmake-build-debug/Makefile&quot;  VERBOSE=1 sltcc"/>
+					<CompileFile command="/usr/bin/gmake -j4 -f &quot;/home/shiletong/codes/learncompiler/labs/sltcc/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/gmake -j4 -f &quot;/home/shiletong/codes/learncompiler/labs/sltcc/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/gmake -j4 -f &quot;/home/shiletong/codes/learncompiler/labs/sltcc/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="sltcc/fast">
+				<Option output="/home/shiletong/codes/learncompiler/labs/sltcc/cmake-build-debug/sltcc" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/shiletong/codes/learncompiler/labs/sltcc/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/usr/lib/gcc/x86_64-redhat-linux/7/../../../../include/c++/7"/>
+					<Add directory="/usr/lib/gcc/x86_64-redhat-linux/7/../../../../include/c++/7/x86_64-redhat-linux"/>
+					<Add directory="/usr/lib/gcc/x86_64-redhat-linux/7/../../../../include/c++/7/backward"/>
+					<Add directory="/usr/lib/gcc/x86_64-redhat-linux/7/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/gmake -j4 -f &quot;/home/shiletong/codes/learncompiler/labs/sltcc/cmake-build-debug/Makefile&quot;  VERBOSE=1 sltcc/fast"/>
+					<CompileFile command="/usr/bin/gmake -j4 -f &quot;/home/shiletong/codes/learncompiler/labs/sltcc/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/gmake -j4 -f &quot;/home/shiletong/codes/learncompiler/labs/sltcc/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/gmake -j4 -f &quot;/home/shiletong/codes/learncompiler/labs/sltcc/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/SymbolTable.cpp">
+			<Option target="sltcc"/>
+		</Unit>
+		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/SymbolTable.h">
+			<Option target="sltcc"/>
+		</Unit>
+		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/ast.cpp">
+			<Option target="sltcc"/>
+		</Unit>
+		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/ast.h">
+			<Option target="sltcc"/>
+		</Unit>
+		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/error.cpp">
+			<Option target="sltcc"/>
+		</Unit>
+		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/error.h">
+			<Option target="sltcc"/>
+		</Unit>
+		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/lex.cpp">
+			<Option target="sltcc"/>
+		</Unit>
+		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/lex.h">
+			<Option target="sltcc"/>
+		</Unit>
+		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/main.cpp">
+			<Option target="sltcc"/>
+		</Unit>
+		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/parenfulprinter.cpp">
+			<Option target="sltcc"/>
+		</Unit>
+		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/parenfulprinter.h">
+			<Option target="sltcc"/>
+		</Unit>
+		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/parser.cpp">
+			<Option target="sltcc"/>
+		</Unit>
+		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/parser.h">
+			<Option target="sltcc"/>
+		</Unit>
+		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/platform.h">
+			<Option target="sltcc"/>
+		</Unit>
+		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/tacdef.cpp">
+			<Option target="sltcc"/>
+		</Unit>
+		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/tacdef.h">
+			<Option target="sltcc"/>
+		</Unit>
+		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/tacgenerator.cpp">
+			<Option target="sltcc"/>
+		</Unit>
+		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/tacgenerator.h">
+			<Option target="sltcc"/>
+		</Unit>
+		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/token.cpp">
+			<Option target="sltcc"/>
+		</Unit>
+		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/token.h">
+			<Option target="sltcc"/>
+		</Unit>
+		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/type.cpp">
+			<Option target="sltcc"/>
+		</Unit>
+		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/type.h">
+			<Option target="sltcc"/>
+		</Unit>
+		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/typechecker.cpp">
+			<Option target="sltcc"/>
+		</Unit>
+		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/typechecker.h">
+			<Option target="sltcc"/>
+		</Unit>
+		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/visitor.h">
+			<Option target="sltcc"/>
+		</Unit>
+		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+	</Project>
+</CodeBlocks_project_file>
