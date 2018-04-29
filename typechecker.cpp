@@ -27,10 +27,14 @@ void TypeChecker::visit(WhileStmt* node)
 
 void TypeChecker::visit(ForStmt* node)
 {
-    node->init_->accept(*this);
-    node->cond_->accept(*this);
-    checkAsCond(node->cond_);
-    node->stepby_->accept(*this);
+    if (node->init_)
+        node->init_->accept(*this);
+    if (node->cond_) {
+        node->cond_->accept(*this);
+        checkAsCond(node->cond_);
+    }
+    if (node->stepby_)
+        node->stepby_->accept(*this);
     node->body_->accept(*this);
 }
 
@@ -121,7 +125,7 @@ void TypeChecker::visit(UnaryOpExpr* node)
     }
     case Token::Not: {
         checkAsCond(operand);
-        node->evalType = operand->promotedTo; // unsigned long
+        node->evalType = BuiltInType::charType();
         break;
     }
     case Token::BitInv: {
@@ -220,13 +224,15 @@ void TypeChecker::visit(BinaryOpExpr* node)
     case Token::Ne: {
         if (Type::isArithmetic(lhs->evalType) && Type::isArithmetic(rhs->evalType)) {
             checkArithmetic(node, lhs, rhs);
+            node->evalType = BuiltInType::charType();
+            /// so the type set for node->evalTyppe in chechArithmetic is discarded
         } else if (lhs->evalType->tag() == Type::Pointer
                    && rhs->evalType->tag() == Type::Pointer) {
             checkPointerCompare(node, lhs, rhs);
         } else {
             throw Error(node->tok(), "can't compare lhs and rhs");
         }
-        node->evalType = BuiltInType::maxUIntType();
+        node->evalType = BuiltInType::charType();
     }
 
     case Token::BitAnd:
@@ -242,10 +248,9 @@ void TypeChecker::visit(BinaryOpExpr* node)
 
     case Token::And:
     case Token::Or: {
-        node->isCond = true;
         checkAsCond(lhs);
         checkAsCond(rhs);
-        node->evalType = BuiltInType::maxUIntType();
+        node->evalType = BuiltInType::charType();
         break;
     }
 
@@ -275,7 +280,7 @@ void TypeChecker::visit(ConditionExpr* node)
     // TODO not implemented
 }
 
-void TypeChecker::visit(FuncCall* node)
+void TypeChecker::visit(FuncCallExpr* node)
 {
     auto ent = currScope().find(node->funcName_);
     if (!ent || ent->type->tag() != Type::Tag::Func) {
@@ -542,11 +547,11 @@ void TypeChecker::checkAsCond(const std::shared_ptr<Expr>& expr)
     if (Type::isInteger(expr->evalType) || expr->evalType->tag() == Type::Pointer) {
         // if (expr->evalType->width() < INTS)
         expr->isCond = true;
-        auto prom = std::make_shared<BuiltInType>
+        /*auto prom = std::make_shared<BuiltInType>
                 (BuiltInType::Integer, true, PTRSIZE, 0);
         if (!expr->evalType->equalUnqual(prom)) {
             expr->promotedTo = std::move(prom);
-        }
+        }*/
     } else {
         throw Error(expr->tok(), "expression cannot be used in a boolean expression");
     }

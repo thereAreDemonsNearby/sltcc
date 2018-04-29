@@ -60,6 +60,8 @@ public:
     std::shared_ptr<Expr> parseConditional();
     std::shared_ptr<Expr> parseAssignment(); // = += -= ...
 
+    std::shared_ptr<Expr> parseExprInForHead();
+
     template<typename Func>
     std::shared_ptr<Expr>
     parseBinaryOp(std::vector<Token::OperatorType> li, const Func& fn);

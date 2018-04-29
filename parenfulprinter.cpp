@@ -29,11 +29,23 @@ void ParenfulPrinter::visit(WhileStmt* node)
 void ParenfulPrinter::visit(ForStmt* node)
 {
     cout << "(for ";
-    node->init_->accept(*this);
+    if (node->init_)
+        node->init_->accept(*this);
+    else
+        cout << " ";
+
     cout << " ";
-    node->cond_->accept(*this);
+    if (node->cond_)
+        node->cond_->accept(*this);
+    else
+        cout << " ";
+
     cout << " ";
-    node->stepby_->accept(*this);
+    if (node->stepby_)
+        node->stepby_->accept(*this);
+    else
+        cout << " ";
+
     cout << "\n(";
     node->body_->accept(*this);
     cout << "))\n";
@@ -133,7 +145,7 @@ void ParenfulPrinter::visit(ConditionExpr* node)
     cout << ")";
 }
 
-void ParenfulPrinter::visit(FuncCall* node)
+void ParenfulPrinter::visit(FuncCallExpr* node)
 {
     cout << "(" << node->funcName_ << " ";
     for (auto& item : node->args_) {

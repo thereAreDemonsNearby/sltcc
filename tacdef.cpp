@@ -14,19 +14,19 @@ static const char* strfy[] = {
         "call", "retval", "getarg", "getargp", "putarg", "putargstk",
 };
 
-Var::Var(Reg r) : tag(TReg), u(r)
+Var::Var(Reg r) : tag(TReg), uvar(r)
 {
 }
 
-Var::Var(int64_t imm) : tag(TImmi), u(imm)
+Var::Var(int64_t imm) : tag(TImmi), uvar(imm)
 {
 }
 
-Var::Var(Entry* s) : tag(TVar), u(s)
+Var::Var(Entry* s) : tag(TVar), uvar(s)
 {
 }
 
-Var::Var(Label l) : tag(TLbl), u(l)
+Var::Var(Label l) : tag(TLbl), uvar(l)
 {
 }
 
@@ -36,13 +36,15 @@ std::string Var::toString() const
 {
     switch (tag) {
     case TReg:
-        return boost::get<Reg>(u).toString();
+        return std::get<Reg>(uvar).toString();
     case TImmi:
-        return std::to_string(boost::get<int>(u));
+        return std::to_string(std::get<int>(uvar));
     case TVar:
-        return *boost::get<Entry*>(u)->pname;
+        return *std::get<Entry*>(uvar)->pname;
     case TLbl:
-        return boost::get<Label>(u).toString();
+        return std::get<Label>(uvar).toString();
+    case TPool:
+        return ".STRCONST";
     case TNone:
         return " ";
     default:
@@ -53,10 +55,16 @@ std::string Var::toString() const
 bool Var::operator==(const Var& rhs) const
 {
     if (tag == rhs.tag) {
-        return u == rhs.u;
+        return uvar == rhs.uvar;
     } else {
         return false;
     }
+}
+
+Var::Var(StringPoolEntry* e)
+    : uvar(e)
+{
+
 }
 
 std::string Label::toString() const
@@ -140,6 +148,19 @@ std::string TacIR::toString() const
         ret.append(f.toString()).append("\n"); // one more new line
     }
     return ret;
+}
+
+
+StringPoolEntry* StringPool::findOrInsert(const std::string& str)
+{
+    auto iter = pool_.find(str);
+    if (iter == pool_.end()) {
+        auto [pos, inserted] = pool_.insert({std::move(str), StringPoolEntry()});
+        assert(inserted);
+        return &pos->second;
+    } else {
+        return &iter->second;
+    }
 }
 
 } // end namespace tac

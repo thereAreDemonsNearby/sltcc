@@ -192,25 +192,25 @@ void ConditionExpr::accept(Visitor& v)
     v.visit(this);
 }
 
-FuncCall::FuncCall(const Token* tok, const std::string& name,
+FuncCallExpr::FuncCallExpr(const Token* tok, const std::string& name,
                    std::vector<std::shared_ptr<Expr>>&& argli)
     : Expr(tok), funcName_(name), args_(argli)
 {
     tag_ = ExprTag::FuncCall;
 }
 
-void FuncCall::accept(Visitor& v)
+void FuncCallExpr::accept(Visitor& v)
 {
     v.visit(this);
 }
 
-FuncCall::FuncCall(const Token* tok, std::string n)
+FuncCallExpr::FuncCallExpr(const Token* tok, std::string n)
     : Expr(tok), funcName_(std::move(n))
 {
     tag_ = ExprTag::FuncCall;
 }
 
-void FuncCall::addArg(const std::shared_ptr<Expr>& arg)
+void FuncCallExpr::addArg(const std::shared_ptr<Expr>& arg)
 {
     args_.push_back(arg);
 }

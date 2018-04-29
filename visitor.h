@@ -20,7 +20,7 @@ class Block;
 class UnaryOpExpr;
 class BinaryOpExpr;
 class ConditionExpr;
-class FuncCall;
+class FuncCallExpr;
 class MemberExpr;
 class ArrayRefExpr;
 class VarExpr;
@@ -51,7 +51,7 @@ public:
     virtual void visit(UnaryOpExpr*) { assert(false); }
     virtual void visit(BinaryOpExpr*) { assert(false); }
     virtual void visit(ConditionExpr*) { assert(false); }
-    virtual void visit(FuncCall*) { assert(false); }
+    virtual void visit(FuncCallExpr*) { assert(false); }
     virtual void visit(MemberExpr*) { assert(false); }
     virtual void visit(ArrayRefExpr*) { assert(false); }
     virtual void visit(VarExpr*) { assert(false); }

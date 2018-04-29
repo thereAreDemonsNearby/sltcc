@@ -1,6 +1,34 @@
 #include "tacgenerator.h"
 #include <iterator>
 
+namespace
+{
+/// 传入一个有符号版本，然后撅定用有符号还是无符号版本
+Tac::Opcode properLoadInst(const std::shared_ptr<Type>& ty, Tac::Opcode op)
+{
+    auto filter = [](Tac::Opcode top) -> Tac::Opcode {
+        switch (top) {
+        case Tac::Loadi: return Tac::Loadiu;
+        case Tac::Loadr: return Tac::Loadru;
+        case Tac::Loadrc: return Tac::Loadrcu;
+        case Tac::Loadrr: return Tac::Loadrru;
+        default: assert(false);
+        }
+    };
+
+    if (Type::isInteger(ty)) {
+        auto intTy = static_cast<BuiltInType*>(ty.get());
+        if (intTy->isUnsigned()) {
+            return filter(op);
+        } else {
+            return op;
+        }
+    } else {
+        return filter(op);
+    }
+}
+
+}
 
 #define ExprType(expr) ((expr)->promotedTo ? (expr)->promotedTo : (expr)->evalType)
 
@@ -65,11 +93,17 @@ void FuncGenerator::visit(ForStmt* node)
     auto beginLabel = nextLabel();
     auto outLabel = nextLabel();
     BranchGenerator bg(*this, false, outLabel);
-    node->init_->accept(*this);
+    if (node->init_)
+        node->init_->accept(*this);
     emit({Tac::LabelLine, beginLabel});
-    node->cond_->accept(bg);
+    if (node->cond_)
+        node->cond_->accept(bg);
+    else {
+        // nothing need to do
+    }
     node->body_->accept(*this);
-    node->stepby_->accept(*this);
+    if (node->stepby_)
+        node->stepby_->accept(*this);
     emit({Tac::Jmp, beginLabel});
     emit({Tac::LabelLine, outLabel});
 }
@@ -123,14 +157,10 @@ void FuncGenerator::visit(VarDef* node)
         currFunction_.local.push_back(ent);
     } else {
         // struct union array should be in memory
-        auto tag = Type::derefIfUserDefined(ent->type)->tag();
-        if (tag == Type::Array) {
-            currFunction_.local.push_back(ent);
-        } else if (tag == Type::Compound) {
-            currFunction_.local.push_back(ent);
-        } else {
-            /// bind a unambiguous scalar type to a register
+        if (Type::isScalar(ent->type)) {
             ent->boundTo = nextReg();
+        } else {
+            currFunction_.local.push_back(ent);
         }
     }
 
@@ -164,22 +194,35 @@ void FuncGenerator::visit(BinaryOpExpr* node)
     auto op = node->operator_;
     switch (op) {
     case Token::Assign: {
-        // TODO struct type assignment
-        ValueGenerator rhsGen(*this);
-        LValueGenerator lhsGen(*this);
-        node->rhs_->accept(rhsGen);
-        node->lhs_->accept(lhsGen);
-        auto width = ExprType(node->lhs_)->width();
-        /// 右值和左值之间的类型差异已经由checkAssignE2T在标记promotedTo中指出。
-        /// 我们假定这种隐式转换由ValueGenerator妥善解决。
-        if (lhsGen.inMemory()) {
-            emit({Tac::Storer, rhsGen.value(), lhsGen.addr(), Tac::Var::empty, width});
+        if (Type::isScalar(node->lhs_->evalType)) {
+            ValueGenerator rhsGen(*this);
+            LValueGenerator lhsGen(*this);
+            node->rhs_->accept(rhsGen);
+            node->lhs_->accept(lhsGen);
+            auto width = ExprType(node->lhs_)->width();
+            /// 右值和左值之间的类型差异已经由checkAssignE2T在标记promotedTo中指出。
+            /// 我们假定这种隐式转换由ValueGenerator妥善解决。
+            if (lhsGen.inMemory()) {
+                emit({Tac::Storer, rhsGen.value(), lhsGen.addr(), Tac::Var::empty, width});
+            } else {
+                emit({Tac::Movrr, rhsGen.value(), Tac::Var::empty, lhsGen.addr()});
+            }
         } else {
-            emit({Tac::Movrr, rhsGen.value(), Tac::Var::empty, lhsGen.addr()});
+            auto ty = Type::derefIfUserDefined(node->lhs_->evalType);
+            assert(ty->tag() == Type::Compound);
+            assert(node->lhs_->evalType->equalUnqual(node->rhs_->evalType));
+
+            LValueGenerator rhsGen(*this);
+            LValueGenerator lhsGen(*this);
+            node->rhs_->accept(rhsGen);
+            node->lhs_->accept(lhsGen);
+            assert(lhsGen.inMemory() && rhsGen.inMemory());
+            auto compoundTy = static_cast<CompoundType*>(ty.get());
+            compoundAssignment(compoundTy, lhsGen.addr(), rhsGen.addr());
         }
+
         break;
     }
-    /* TODO compound assignment */
     default: {
         ValueGenerator vg(*this);
         vg.visit(node);
@@ -187,9 +230,26 @@ void FuncGenerator::visit(BinaryOpExpr* node)
     }
 }
 
+void FuncGenerator::compoundAssignment(CompoundType* type, Tac::Reg lhsAddr, Tac::Reg rhsAddr)
+{
+    auto wholeSize = type->width();
+    auto tempReg = nextReg();
+    std::size_t pos, offset;
+    for (pos = 0, offset = 0;
+         pos < wholeSize / PTRSIZE;
+         pos += 1, offset += PTRSIZE) {
+        emit({Tac::Loadrc, rhsAddr, offset, tempReg});
+        emit({Tac::Storerc, tempReg, lhsAddr, offset});
+    }
+
+    for ( ; offset < wholeSize; ++offset) {
+        emit({Tac::Loadrcu, rhsAddr, offset, tempReg, 1});
+        emit({Tac::Storerc, tempReg, lhsAddr, offset, 1});
+    }
+}
 
 /// trivial visit functions:
-void FuncGenerator::visit(FuncCall* node)
+void FuncGenerator::visit(FuncCallExpr* node)
 {
     ValueGenerator vg(*this);
     vg.visit(node);
@@ -233,11 +293,13 @@ void FuncGenerator::visit(SizeofExpr* node)
 
 void FuncGenerator::visit(ReturnStmt* node)
 {
-    // TODO  struct type
+    // TODO struct type
     ValueGenerator vg(*this);
     node->ret_->accept(vg);
     emit({Tac::RetVal, vg.value()});
 }
+
+
 
 
 void BranchGenerator::visit(BinaryOpExpr* node)
@@ -248,15 +310,15 @@ void BranchGenerator::visit(BinaryOpExpr* node)
         if (!when_) {
             /// when cond is false goto label else fall through
             // 虽然这两个Generator和*this是一个东西，但是为了清晰，还是创建他们
-            BranchGenerator lhs(mainGenerator_, false, goto_);
-            BranchGenerator rhs(mainGenerator_, false, goto_);
+            BranchGenerator lhs(funcGenerator_, false, goto_);
+            BranchGenerator rhs(funcGenerator_, false, goto_);
             node->lhs_->accept(lhs);
             node->rhs_->accept(rhs);
         } else {
             assert(when_);
             auto outLabel = nextLabel();
-            BranchGenerator lhs(mainGenerator_, false, outLabel);
-            BranchGenerator rhs(mainGenerator_, true, goto_);
+            BranchGenerator lhs(funcGenerator_, false, outLabel);
+            BranchGenerator rhs(funcGenerator_, true, goto_);
             node->lhs_->accept(lhs);
             node->rhs_->accept(rhs);
             emit({Tac::LabelLine, outLabel});
@@ -266,15 +328,15 @@ void BranchGenerator::visit(BinaryOpExpr* node)
     case Token::Or: {
         if (!when_) {
             auto outLabel = nextLabel();
-            BranchGenerator lhs(mainGenerator_, true, outLabel);
-            BranchGenerator rhs(mainGenerator_, false, goto_);
+            BranchGenerator lhs(funcGenerator_, true, outLabel);
+            BranchGenerator rhs(funcGenerator_, false, goto_);
             node->lhs_->accept(lhs);
             node->rhs_->accept(rhs);
             emit({Tac::LabelLine, outLabel});
         } else {
             assert(when_);
-            BranchGenerator lhs(mainGenerator_, true, goto_);
-            BranchGenerator rhs(mainGenerator_, true, goto_);
+            BranchGenerator lhs(funcGenerator_, true, goto_);
+            BranchGenerator rhs(funcGenerator_, true, goto_);
             node->lhs_->accept(lhs);
             node->rhs_->accept(rhs);
         }
@@ -287,8 +349,8 @@ void BranchGenerator::visit(BinaryOpExpr* node)
     case Token::Se:
     case Token::Eq:
     case Token::Ne: {
-        ValueGenerator vgl(mainGenerator_);
-        ValueGenerator vgr(mainGenerator_);
+        ValueGenerator vgl(funcGenerator_);
+        ValueGenerator vgr(funcGenerator_);
         node->lhs_->accept(vgl);
         node->rhs_->accept(vgr);
         Tac::Reg lhs = vgl.value(),
@@ -299,7 +361,7 @@ void BranchGenerator::visit(BinaryOpExpr* node)
     }
 
     default: {
-        ValueGenerator vg(mainGenerator_);
+        ValueGenerator vg(funcGenerator_);
         vg.visit(node);
         implicitCond(vg.value(), ExprType(node));
         break;
@@ -311,12 +373,12 @@ void BranchGenerator::visit(UnaryOpExpr* node)
 {
     switch (node->operator_) {
     case Token::Not: {
-        BranchGenerator bg(mainGenerator_, !when_, goto_);
+        BranchGenerator bg(funcGenerator_, !when_, goto_);
         node->operand_->accept(bg);
         break;
     }
     default: {
-        ValueGenerator vg(mainGenerator_);
+        ValueGenerator vg(funcGenerator_);
         vg.visit(node);
         implicitCond(vg.value(), ExprType(node));
         break;
@@ -324,51 +386,51 @@ void BranchGenerator::visit(UnaryOpExpr* node)
     }
 }
 
-void BranchGenerator::visit(FuncCall* node)
+void BranchGenerator::visit(FuncCallExpr* node)
 {
-    ValueGenerator vg(mainGenerator_);
+    ValueGenerator vg(funcGenerator_);
     vg.visit(node);
     implicitCond(vg.value(), ExprType(node));
 }
 
 void BranchGenerator::visit(MemberExpr* node)
 {
-    ValueGenerator vg(mainGenerator_);
+    ValueGenerator vg(funcGenerator_);
     vg.visit(node);
     implicitCond(vg.value(), ExprType(node));
 }
 
 void BranchGenerator::visit(ArrayRefExpr* node)
 {
-    ValueGenerator vg(mainGenerator_);
+    ValueGenerator vg(funcGenerator_);
     vg.visit(node);
     implicitCond(vg.value(), ExprType(node));
 }
 
 void BranchGenerator::visit(VarExpr* node)
 {
-    ValueGenerator vg(mainGenerator_);
+    ValueGenerator vg(funcGenerator_);
     vg.visit(node);
     implicitCond(vg.value(), ExprType(node));
 }
 
 void BranchGenerator::visit(CastExpr* node)
 {
-    ValueGenerator vg(mainGenerator_);
+    ValueGenerator vg(funcGenerator_);
     vg.visit(node);
     implicitCond(vg.value(), ExprType(node));
 }
 
 void BranchGenerator::visit(LiteralExpr* node)
 {
-    ValueGenerator vg(mainGenerator_);
+    ValueGenerator vg(funcGenerator_);
     vg.visit(node);
     implicitCond(vg.value(), ExprType(node));
 }
 
 void BranchGenerator::visit(SizeofExpr* node)
 {
-    ValueGenerator vg(mainGenerator_);
+    ValueGenerator vg(funcGenerator_);
     vg.visit(node);
     implicitCond(vg.value(), ExprType(node));
 }
@@ -549,18 +611,18 @@ void ValueGenerator::visit(UnaryOpExpr* node)
         // &
         if (node->operand_->evalType->tag() == Type::Array) {
             assert(!node->operand_->promotedTo);
-            ValueGenerator vg(mainGenerator_);
+            ValueGenerator vg(funcGenerator_);
             node->operand_->accept(vg);
             reg_ = vg.value();
         } else {
-            LValueGenerator lg(mainGenerator_);
+            LValueGenerator lg(funcGenerator_);
             node->operand_->accept(lg);
             assert(lg.inMemory());
             reg_ = lg.addr();
         }
     } else if (op == Token::Not) {
         auto falseLabel = nextLabel();
-        BranchGenerator bg(mainGenerator_, false, falseLabel);
+        BranchGenerator bg(funcGenerator_, false, falseLabel);
         bg.visit(node);
         reg_ = nextReg();
         auto outLabel = nextLabel();
@@ -570,7 +632,7 @@ void ValueGenerator::visit(UnaryOpExpr* node)
         emit({Tac::Loadi, 0L, Tac::Var::empty, reg_});
         emit({Tac::LabelLine, outLabel});
     } else {
-        ValueGenerator opndGen(mainGenerator_);
+        ValueGenerator opndGen(funcGenerator_);
         node->operand_->accept(opndGen);
         auto res = opndGen.value();
 
@@ -592,14 +654,15 @@ void ValueGenerator::visit(UnaryOpExpr* node)
 
         case Token::Mult: {
             /// *
-            // TODO struct type loading
             assert(Type::isPointer(node->operand_->evalType));
             auto ptrTy = static_cast<PointerType*>(node->operand_->evalType.get());
             if (ptrTy->base()->tag() == Type::Array) {
                 reg_ = res;
             } else {
+                auto width = node->evalType->width();
                 reg_ = nextReg();
-                emit({Tac::Loadr, res, Tac::Var::empty, reg_});
+                Tac::Opcode inst = properLoadInst(node->evalType, Tac::Loadr);
+                emit({inst, res, Tac::Var::empty, reg_, width});
             }
 
             break;
@@ -627,18 +690,18 @@ void ValueGenerator::visit(BinaryOpExpr* node)
     assert((int)op < (int)Token::Assign || (int)op > (int)Token::SftRAssign);
     if ((int)Token::Eq <= (int)op && (int)op <= (int)Token::Or) {
         auto falseLabel = nextLabel();
-        BranchGenerator bg(mainGenerator_, false, falseLabel);
+        BranchGenerator bg(funcGenerator_, false, falseLabel);
         bg.visit(node);
         reg_ = nextReg();
         auto outLabel = nextLabel();
         emit({Tac::Loadi, 1, Tac::Var::empty, reg_});
         emit({Tac::Jmp, outLabel});
         emit({Tac::LabelLine, falseLabel});
-        emit({Tac::Loadi, (int64_t)0, Tac::Var::empty, reg_});
+        emit({Tac::Loadi, 0L, Tac::Var::empty, reg_});
         emit({Tac::LabelLine, outLabel});
     } else {
-        ValueGenerator lhsGen(mainGenerator_),
-                rhsGen(mainGenerator_);
+        ValueGenerator lhsGen(funcGenerator_),
+                rhsGen(funcGenerator_);
         node->lhs_->accept(lhsGen);
         node->rhs_->accept(rhsGen);
         auto lhs = lhsGen.value();
@@ -719,7 +782,7 @@ void ValueGenerator::visit(BinaryOpExpr* node)
 
 void ValueGenerator::visit(MemberExpr* node)
 {
-    LValueGenerator addrGen(mainGenerator_);
+    LValueGenerator addrGen(funcGenerator_);
     node->compound_->accept(addrGen);
     assert(addrGen.inMemory());
     auto base = addrGen.addr();
@@ -730,7 +793,16 @@ void ValueGenerator::visit(MemberExpr* node)
     auto memberEnt = ty->members().find(node->memberName_);
     auto offset = memberEnt->offset;
 
-    emit({Tac::Loadrc, base, offset, reg_});
+    reg_ = nextReg();
+    if (node->evalType->tag() == Type::Array) {
+        emit({Tac::Add, base, offset, reg_});
+    } else {
+        assert(Type::isScalar(node->evalType));
+        auto width = node->evalType->width();
+        Tac::Opcode inst = properLoadInst(node->evalType, Tac::Loadrc);
+        emit({inst, base, offset, reg_, width});
+    }
+
     if (node->promotedTo) {
         // need cast
         reg_ = cast(reg_, node->evalType, node->promotedTo, true);
@@ -741,12 +813,12 @@ void ValueGenerator::visit(ArrayRefExpr* node)
 {
     assert(not node->head_->promotedTo);
 
-    ValueGenerator idxGen(mainGenerator_);
+    ValueGenerator idxGen(funcGenerator_);
     node->index_->accept(idxGen);
     auto index = idxGen.value();
 
     if (node->head_->evalType->tag() == Type::Pointer) {
-        ValueGenerator vg(mainGenerator_);
+        ValueGenerator vg(funcGenerator_);
         node->head_->accept(vg);
         auto ptrType = static_cast<PointerType*>(node->head_->evalType);
         auto biase = ptrType->base()->width();
@@ -756,11 +828,12 @@ void ValueGenerator::visit(ArrayRefExpr* node)
         if (ptrType->base()->tag() == Type::Array) {
             emit({Tac::Add, vg.value(), offset, reg_});
         } else {
-            emit({Tac::Loadrr, vg.value(), offset, reg_});
+            emit({properLoadInst(node->evalType, Tac::Loadrc),
+                  vg.value(), offset, reg_});
         }
     } else {
         assert(node->head_->evalType->tag() == Type::Array);
-        ValueGenerator vg(mainGenerator_);
+        ValueGenerator vg(funcGenerator_);
         node->head_->accept(vg);
         auto arrType = static_cast<ArrayType*>(node->head_->evalType);
         auto biase = arrType->base()->width();
@@ -770,7 +843,8 @@ void ValueGenerator::visit(ArrayRefExpr* node)
         if (arrType->base()->tag() == Type::Array) {
             emit({Tac::Add, vg.value(), offset, reg_});
         } else {
-            emit({Tac::Loadrr, vg.value(), offset, reg_});
+            emit({properLoadInst(node->evalType, Tac::Loadrc),
+                  vg.value(), offset, reg_});
         }
     }
 }
@@ -784,13 +858,14 @@ void ValueGenerator::visit(VarExpr* node)
     if (type->tag() == Type::Array) {
         // array should be in memory
         reg_ = nextReg();
-        emit({Tac::Loadi, varEnt, Tac::Var::empty, reg_});
+        emit({Tac::Loadiu, varEnt, Tac::Var::empty, reg_});
         inplace = true;
     } else {
         assert(Type::isArithmetic(type) || Type::isPointer(type));
         if (varEnt->ambiguous) {
             reg_ = nextReg();
-            emit({Tac::Loadr, varEnt, Tac::Var::empty, reg_});
+            emit({properLoadInst(node->evalType, Tac::Loadr),
+                  varEnt, Tac::Var::empty, reg_});
             inplace = true;
         } else {
             reg_ = varEnt->boundTo;
@@ -806,7 +881,7 @@ void ValueGenerator::visit(VarExpr* node)
 
 void ValueGenerator::visit(CastExpr* node)
 {
-    ValueGenerator casteeGen(mainGenerator_);
+    ValueGenerator casteeGen(funcGenerator_);
     node->expr_->accept(casteeGen);
     auto val = casteeGen.value();
     // allocation of new register is in function "cast"
@@ -821,7 +896,7 @@ void ValueGenerator::visit(CastExpr* node)
 void ValueGenerator::visit(SizeofExpr* node)
 {
     reg_ = nextReg();
-    emit({Tac::Loadi, node->type_->width(), Tac::Var::empty, reg_});
+    emit({Tac::Loadiu, node->type_->width(), Tac::Var::empty, reg_});
 
     if (node->promotedTo) {
         // need cast
@@ -831,6 +906,7 @@ void ValueGenerator::visit(SizeofExpr* node)
 
 void ValueGenerator::visit(LiteralExpr* node)
 {
+    // TODO think about int types
     auto literalTok = node->tok_;
     auto literalType = literalTok->type();
     int64_t immi;
@@ -843,16 +919,18 @@ void ValueGenerator::visit(LiteralExpr* node)
             immi = literalTok->charLiteral();
             break;
         default:
-            assert("other literal types are not implemented");
+            assert(false && "other literal types are not implemented");
         }
         reg_ = nextReg();
         emit({Tac::Loadi, immi, Tac::Var::empty, reg_});
 
     } else if (Type::isFloating(node->evalType)) {
-        assert("other literal types are not implemented");
+        assert(false && "other literal types are not implemented");
     } else if (literalType == Token::StringLiteral) {
-        // TODO pool to store string literals
         assert(node->evalType->equal(PointerType::strLiteralType()));
+        auto ent = funcGenerator_.strPool().findOrInsert(literalTok->stringLiteral());
+        reg_ = nextReg();
+        emit({Tac::Loadiu, ent, Tac::Var::empty, reg_});
     } else {
         assert(false);
     }
@@ -863,17 +941,49 @@ void ValueGenerator::visit(LiteralExpr* node)
     }
 }
 
+void ValueGenerator::visit(FuncCallExpr* node)
+{
+    auto argNum = node->args_.size();
+    // TODO firstly process the return value
+    if (!Type::isScalar(node->evalType)) {
+        /// return type is struct or union
+        auto ty = Type::derefIfUserDefined(node->evalType);
+        assert(ty->tag() == Type::Compound);
+        auto compoundTy = static_cast<CompoundType*>(ty.get());
+        auto width = compoundTy->width();
+
+        emit({Tac::Sub, Tac::Reg::PStack, width, Tac::Reg::PStack});
+        emit({Tac::PutArg, argNum + 1});
+    }
+
+    for (auto rit = node->args_.rbegin(); rit != node->args_.rend(); ++rit) {
+        ValueGenerator valGen(funcGenerator_);
+        (*rit)->accept(valGen);
+        if (Type::isScalar(ExprType(*rit))) {
+            emit({Tac::PutArg, valGen.value()});
+        } else {
+            auto ty = Type::derefIfUserDefined(ExprType(*rit));
+            if (ty->tag() == Type::Array) {
+                emit({Tac::PutArg, valGen.value()});
+            } else {
+                emit({Tac::PutArgStk, 0L});
+            }
+        }
+    }
+}
+
+
 void LValueGenerator::visit(ArrayRefExpr* node)
 {
     assert(not node->head_->promotedTo);
 
-    ValueGenerator idxGen(mainGenerator_);
+    ValueGenerator idxGen(funcGenerator_);
     node->index_->accept(idxGen);
     auto index = idxGen.value();
 
     if (node->head_->evalType->tag() == Type::Pointer) {
         // get pointer value
-        ValueGenerator vg(mainGenerator_);
+        ValueGenerator vg(funcGenerator_);
         node->head_->accept(vg);
         auto biase = static_cast<PointerType*>(node->head_->evalType)->base()->width();
         auto offset = nextReg();
@@ -882,12 +992,61 @@ void LValueGenerator::visit(ArrayRefExpr* node)
         emit({Tac::Add, vg.value(), offset, addr_});
     } else {
         assert(node->head_->evalType->tag() == Type::Array);
-        ValueGenerator vg(mainGenerator_);
+        ValueGenerator vg(funcGenerator_);
         node->head_->accept(vg);
         auto biase = static_cast<ArrayType*>(node->head_->evalType)->base()->width();
         auto offset = nextReg();
         addr_ = nextReg();
         emit({Tac::Mul, index, biase, offset});
         emit({Tac::Add, vg.value(), offset, addr_});
+    }
+}
+
+void LValueGenerator::visit(VarExpr* node)
+{
+    auto ent = currScope().find(node->varName());
+    if (ent->ambiguous) {
+        inMemory_ = true;
+        addr_ = nextReg();
+        emit({Tac::Loadiu, ent, Tac::Var::empty, addr_});
+    } else {
+        if (Type::isScalar(ent->type)) {
+            inMemory_ = false;
+            addr_ = ent->boundTo;
+        } else {
+            inMemory_ = true;
+            addr_ = nextReg();
+            emit({Tac::Loadiu, ent, Tac::Var::empty, addr_});
+        }
+    }
+}
+
+void LValueGenerator::visit(MemberExpr* node)
+{
+    LValueGenerator baseGen(funcGenerator_);
+    node->compound_->accept(baseGen);
+    auto base = baseGen.addr(); assert(baseGen.inMemory());
+    assert(node->compound_->evalType->tag() == Type::UserDefined);
+    auto ty = static_cast<CompoundType*>(
+            Type::derefIfUserDefined(node->compound_->evalType).get());
+    auto memberEnt = ty->members().find(node->memberName_);
+    auto offset = memberEnt->offset;
+
+    addr_ = nextReg();
+    emit({Tac::Add, base, offset, addr_});
+}
+
+void LValueGenerator::visit(UnaryOpExpr* node)
+{
+    switch (node->tok()->getOperator()) {
+    case Token::Mult: {
+        /// *
+        ValueGenerator ptrValGen(funcGenerator_);
+        node->operand_->accept(ptrValGen);
+        addr_ = ptrValGen.value();
+        break;
+    }
+    default:
+        assert(false && "not a lvalue");
     }
 }

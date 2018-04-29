@@ -29,6 +29,8 @@ public:
     SymbolTable& currScope() { return *scopeStack_.top(); }
     void pushScope(SymbolTable* s) { scopeStack_.push(s); }
     void popScope() { scopeStack_.pop(); }
+
+    Tac::StringPool& strPool() { return ir_.strPool; }
 private:
     std::stack<SymbolTable*> scopeStack_;
     Tac::TacIR ir_;
@@ -56,7 +58,7 @@ public:
 
     void visit(UnaryOpExpr* node) override;
     void visit(BinaryOpExpr* node) override;
-    void visit(FuncCall* node) override;
+    void visit(FuncCallExpr* node) override;
     void visit(MemberExpr* node) override;
     void visit(ArrayRefExpr* node) override;
     void visit(VarExpr* node) override;
@@ -85,23 +87,28 @@ public:
     void popScope() { tacGen_.popScope(); }
     std::list<Tac::Quad>::iterator emit(const Tac::Quad& quad);
     std::list<Tac::Quad>::iterator lastQuad();
+    Tac::StringPool& strPool() { return tacGen_.strPool(); }
+
+    TacGenerator& tacGenerator() { return tacGen_; }
 private:
     TacGenerator& tacGen_;
     Tac::Function currFunction_;
 
     int regNo_ = 0;
+
+    void compoundAssignment(CompoundType* type, Tac::Reg lhsAddr, Tac::Reg rhsAddr);
 };
 
 class BranchGenerator : public Visitor
 {
 public:
     BranchGenerator(FuncGenerator& tg, bool when, Tac::Label lbl)
-        : mainGenerator_(tg), when_(when), goto_(lbl)
+        : funcGenerator_(tg), when_(when), goto_(lbl)
     {}
 
     void visit(UnaryOpExpr* node) override; // !
     void visit(BinaryOpExpr* node) override; // < > && || ...
-    void visit(FuncCall* node) override;
+    void visit(FuncCallExpr* node) override;
     void visit(MemberExpr* node) override;
     void visit(ArrayRefExpr* node) override;
     void visit(VarExpr* node) override;
@@ -109,13 +116,13 @@ public:
     void visit(LiteralExpr* node) override;
     void visit(SizeofExpr* node) override;
 
-    Tac::Reg nextReg() { return mainGenerator_.nextReg(); }
-    Tac::Label nextLabel() { return mainGenerator_.nextLabel(); }
-    SymbolTable& currScope() { return mainGenerator_.currScope(); }
-    std::list<Tac::Quad>::iterator emit(const Tac::Quad& quad) { mainGenerator_.emit(quad); }
-    std::list<Tac::Quad>::iterator lastQuad() { return mainGenerator_.lastQuad(); }
+    Tac::Reg nextReg() { return funcGenerator_.nextReg(); }
+    Tac::Label nextLabel() { return funcGenerator_.nextLabel(); }
+    SymbolTable& currScope() { return funcGenerator_.currScope(); }
+    std::list<Tac::Quad>::iterator emit(const Tac::Quad& quad) { funcGenerator_.emit(quad); }
+    std::list<Tac::Quad>::iterator lastQuad() { return funcGenerator_.lastQuad(); }
 private:
-    FuncGenerator& mainGenerator_;
+    FuncGenerator& funcGenerator_;
     bool when_;
     Tac::Label goto_;
 
@@ -129,13 +136,13 @@ class ValueGenerator : public Visitor
 {
 public:
     explicit ValueGenerator(FuncGenerator& t)
-            : mainGenerator_(t) {}
+            : funcGenerator_(t) {}
 
     Tac::Reg value() { return reg_; };
 
     void visit(UnaryOpExpr* node) override;
     void visit(BinaryOpExpr* node) override;
-    void visit(FuncCall* node) override;
+    void visit(FuncCallExpr* node) override;
     void visit(MemberExpr* node) override;
     void visit(ArrayRefExpr* node) override;
     void visit(VarExpr* node) override;
@@ -144,24 +151,26 @@ public:
     void visit(SizeofExpr* node) override;
     // void visit(EmptyExpr* node) override;
 
-    Tac::Reg nextReg() { return mainGenerator_.nextReg(); }
-    Tac::Label nextLabel() { return mainGenerator_.nextLabel(); }
-    SymbolTable& currScope() { return mainGenerator_.currScope(); }
-    std::list<Tac::Quad>::iterator emit(const Tac::Quad& quad) { mainGenerator_.emit(quad); }
-    std::list<Tac::Quad>::iterator lastQuad() { return mainGenerator_.lastQuad(); }
+    Tac::Reg nextReg() { return funcGenerator_.nextReg(); }
+    Tac::Label nextLabel() { return funcGenerator_.nextLabel(); }
+    SymbolTable& currScope() { return funcGenerator_.currScope(); }
+    std::list<Tac::Quad>::iterator emit(const Tac::Quad& quad) { funcGenerator_.emit(quad); }
+    std::list<Tac::Quad>::iterator lastQuad() { return funcGenerator_.lastQuad(); }
 private:
     Tac::Reg reg_;
-    FuncGenerator& mainGenerator_;
+    FuncGenerator& funcGenerator_;
 
     Tac::Reg cast(Tac::Reg reg,
                   const std::shared_ptr<Type>& from, const std::shared_ptr<Type>& to,
                   bool inplace);
+
+
 };
 
 class LValueGenerator: public Visitor
 {
 public:
-    LValueGenerator(FuncGenerator& f) : mainGenerator_(f) {}
+    LValueGenerator(FuncGenerator& f) : funcGenerator_(f) {}
     Tac::Reg addr() { return addr_; }
     bool inMemory() { return inMemory_; }
 
@@ -170,14 +179,14 @@ public:
     void visit(ArrayRefExpr* node) override;
     void visit(VarExpr* node) override;
 
-    Tac::Reg nextReg() { return mainGenerator_.nextReg(); }
-    Tac::Label nextLabel() { return mainGenerator_.nextLabel(); }
-    SymbolTable& currScope() { return mainGenerator_.currScope(); }
-    std::list<Tac::Quad>::iterator emit(const Tac::Quad& quad) { mainGenerator_.emit(quad); }
-    std::list<Tac::Quad>::iterator lastQuad() { return mainGenerator_.lastQuad(); }
+    Tac::Reg nextReg() { return funcGenerator_.nextReg(); }
+    Tac::Label nextLabel() { return funcGenerator_.nextLabel(); }
+    SymbolTable& currScope() { return funcGenerator_.currScope(); }
+    std::list<Tac::Quad>::iterator emit(const Tac::Quad& quad) { funcGenerator_.emit(quad); }
+    std::list<Tac::Quad>::iterator lastQuad() { return funcGenerator_.lastQuad(); }
 
 private:
-    FuncGenerator& mainGenerator_;
+    FuncGenerator& funcGenerator_;
     Tac::Reg addr_;
     bool inMemory_ = true;
     // true if this lvalue is not kept in register

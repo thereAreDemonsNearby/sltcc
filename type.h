@@ -81,6 +81,7 @@ public:
     static bool isVoid(const std::shared_ptr<Type>& ty);
     static bool isArithmetic(const std::shared_ptr<Type>& ty);
     static bool isPointer(const std::shared_ptr<Type>& ty);
+    static bool isScalar(const std::shared_ptr<Type>& ty);
     static std::shared_ptr<PointerType> arrayDecay(const std::shared_ptr<Type>& ty);
     static std::shared_ptr<Type> derefIfUserDefined(const std::shared_ptr<Type>& ty);
     static size_t alignAt(const std::shared_ptr<Type>& ty);
@@ -190,7 +191,7 @@ public:
     ListSymtab::iterator begin();
     ListSymtab::iterator end();
 
-    SymbolTable& members() { return members_; }
+    ListSymtab& members() { return members_; }
 
     std::string toString() const override;
 	std::string name() const { return name_; }

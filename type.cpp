@@ -141,6 +141,13 @@ std::shared_ptr<Type> Type::derefIfUserDefined(const std::shared_ptr<Type>& ty)
     return ent->type;
 }
 
+bool Type::isScalar(const std::shared_ptr<Type>& ty)
+{
+    auto toTest = derefIfUserDefined(ty);
+    return Type::isArithmetic(toTest) || Type::isPointer(toTest)
+            || toTest->tag() == Type::Enum;
+}
+
 // null means error: incompatible type specifiers
 std::shared_ptr<BuiltInType> BuiltInType::make(SpecifierHolder spec,
                                                QualifierHolder qh)

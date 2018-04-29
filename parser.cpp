@@ -777,7 +777,7 @@ std::shared_ptr<Expr> Parser::parsePostfix(std::shared_ptr<Expr> prev)
         }
 
         /// return immidiately. no chance for recursion.
-        return std::make_shared<FuncCall>(callOpTok,
+        return std::make_shared<FuncCallExpr>(callOpTok,
                                           static_cast<VarExpr*>(prev.get())->varName(),
                                           std::move(args));
 
@@ -1146,7 +1146,8 @@ std::shared_ptr<ForStmt> Parser::parseForStmt()
     }
     tokens_.next();
 
-    auto init = parseExpr();
+    //if (tokens_.peek().type() == Token::Semicolon)
+    /*auto init = parseExpr();
     if (tokens_.peek().type() != Token::Semicolon) {
         throw Error(&tokens_.peek(), "miss ';' in for statement");
     }
@@ -1163,7 +1164,11 @@ std::shared_ptr<ForStmt> Parser::parseForStmt()
     if (tokens_.peek().type() != Token::RParen) {
         throw Error(&tokens_.peek(), "miss ')' in for statement");
     }
-    tokens_.next();
+    tokens_.next();*/
+
+    auto init = parseExprInForHead();
+    auto cond = parseExprInForHead();
+    auto stepby = parseExprInForHead();
 
     auto body = parseStmt();
     return std::make_shared<ForStmt>(&forTok, init, cond, stepby, body);
@@ -1304,5 +1309,20 @@ std::shared_ptr<ASTNode> Parser::parseTypeDeclOrDef()
         assert(kwd == Token::Enum);
         throw Error(&(*curr), "enum not supported yet.");
         //parseEnumDef();
+    }
+}
+
+std::shared_ptr<Expr> Parser::parseExprInForHead()
+{
+    if (tokens_.peek().type() == Token::Semicolon) {
+        tokens_.next();
+        return nullptr;
+    } else {
+        auto expr = parseExpr();
+        if (tokens_.peek().type() != Token::Semicolon) {
+            throw Error(&tokens_.peek(), "miss ';' in for statement");
+        }
+        tokens_.next();
+        return expr;
     }
 }

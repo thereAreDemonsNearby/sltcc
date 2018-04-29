@@ -47,6 +47,8 @@ class UnaryOpExpr;
 
 class BinaryOpExpr;
 
+class FuncCallExpr;
+
 class Definition;
 
 class CompoundDef;
@@ -368,7 +370,7 @@ class EmptyExpr final : public Expr
     FRIEND_LIST
 
 public:
-    EmptyExpr(const Token*);
+    explicit EmptyExpr(const Token*);
     void accept(Visitor&) override;
 };
 
@@ -433,17 +435,17 @@ private:
     std::shared_ptr<Expr> no_;
 };
 
-class FuncCall final : public Expr
+class FuncCallExpr final : public Expr
 {
     FRIEND_LIST
 
 public:
     void accept(Visitor&) override;
 
-    FuncCall(const Token*, const std::string& name,
+    FuncCallExpr(const Token*, const std::string& name,
              std::vector<std::shared_ptr<Expr>>&&);
 
-    FuncCall(const Token*, std::string);
+    FuncCallExpr(const Token*, std::string);
 
     void addArg(const std::shared_ptr<Expr>&);
 

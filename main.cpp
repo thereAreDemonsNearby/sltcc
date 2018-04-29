@@ -343,7 +343,7 @@ void printCompoundLayout(std::string text, int cnt)
         errs.add(err);
     }
     std::cout << "errors: \n";
-    for (const auto& e : errs) {
+    for (const Error& e : errs) {
         std::cout << e.what() << std::endl;
     }
 }

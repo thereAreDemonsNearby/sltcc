@@ -23,7 +23,7 @@ public:
     void visit(UnaryOpExpr* node) override;
     void visit(BinaryOpExpr* node) override;
     void visit(ConditionExpr* node) override;
-    void visit(FuncCall* node) override;
+    void visit(FuncCallExpr* node) override;
     void visit(MemberExpr* node) override;
     void visit(ArrayRefExpr* node) override;
     void visit(VarExpr* node) override;

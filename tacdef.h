@@ -2,21 +2,25 @@
 #ifndef TACDEF_H__
 #define TACDEF_H__
 
+#include <variant>
 #include <string>
 #include <list>
-#include <vector>
 #include <memory>
-#include <boost/variant.hpp>
-#include "platform.h"
+// #include <boost/variant.hpp>
 #include <vector>
+#include <map>
 #include <cinttypes>
+#include "platform.h"
 
 struct Entry;
 class ListSymtab;
 class Type;
 
+
 namespace Tac
 {
+class StringPool;
+struct StringPoolEntry;
 
 enum Opcode
 {
@@ -59,18 +63,18 @@ struct Var
 {
     enum Tag
     {
-        TReg, TImmi, TVar, TLbl, TNone
+        TReg, TImmi, TVar, TLbl, TPool, TNone
     } tag;
 
     /// int64 : big enough
-    boost::variant<Reg, int64_t, Entry*, Label> u;
+    std::variant<Reg, int64_t, Entry*, Label> uvar;
 
     Var() : tag(TNone) {}
-
     Var(Reg r);
     Var(int64_t imm);
     Var(Entry* s);
     Var(Label l);
+    Var(StringPoolEntry* e);
     std::string toString() const;
     bool operator==(const Var&) const;
     static const Var empty;
@@ -118,8 +122,22 @@ struct Function
     std::string toString() const;
 };
 
+struct StringPoolEntry
+{
+    /// more fields may be added in the future
+};
+
+class StringPool
+{
+private:
+    std::map<std::string, StringPoolEntry> pool_;
+public:
+    StringPoolEntry* findOrInsert(const std::string&);
+};
+
 struct TacIR
 {
+    StringPool strPool;
     std::vector<Function> funcs;
     std::string toString() const;
 };

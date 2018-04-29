@@ -29,7 +29,7 @@ class Error
 {
 public:
     Error(const Token* t, std::string w) : tok_(t), what_(std::move(w)) {}
-    const std::string& what() const { return what_; }
+    const std::string& what() const override { return what_; }
     Token const* token() const { return tok_; }
     void what(std::string e) { what_ = std::move(e); }
 private:
