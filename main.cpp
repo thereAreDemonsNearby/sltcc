@@ -10,6 +10,7 @@
 #include "typechecker.h"
 #include "ast.h"
 #include "tacdef.h"
+#include "tacgenerator.h"
 
 void testSimpleType(std::string str)
 {
@@ -326,6 +327,12 @@ void testSema()
                           "struct B { A a; double b; };\n"
                           "int main() { A x; B y; y.b = 2.2; y.a.val = 3; y.a.next = &x; }", true);
     printSema("int main() { int const* const* p; int* const* q; p = q; }", false);
+    printSema("struct A { int a; }; int main() { const A x; x.a = 3; }", false);
+    printSema("struct A { int a; }; int main() { A const* p; p->a = 3; }", false);
+    printSema("struct A { int a; }; int main() { A* p; p->a = 3; }", true);
+    printSema("struct A { int a; }; int main() { A x; x.a = 3; }", true);
+    printSema("struct A { int a; }; struct B { A x; };"
+              "int main() { const B b;  b.x.a = 3; }", false);
 }
 
 void printCompoundLayout(std::string text, int cnt)
@@ -426,9 +433,37 @@ void testFile()
     }
 }
 
+void printTacGen_(std::string str, int lineno)
+{
+    ErrorLog errs;
+    TokenStream tokens(std::move(str), errs);
+    Parser parser(tokens, errs);
+    TypeChecker sema(errs);
+    TacGenerator tacGen;
+    std::cout << "Line " << lineno << ":\n";
+    auto root = parser.goal();
+    if (errs.count() != 0) goto ErrOut;
+    root->accept(sema);
+    if (errs.count() != 0) goto ErrOut;
+    root->accept(tacGen);
+    std::cout << tacGen.ir().toString() << '\n';
+
+    return;
+
+    ErrOut:
+    std::cout << "errors found. cannot generate tac code." << std::endl;
+}
+#define printTacGen(str) printTacGen_((str), __LINE__)
+
+void testTacGen()
+{
+    printTacGen("int sum() { int a; a = 1; int b = 2; int c = a + b; return c; }");
+}
+
 int main(int argc, char* argv[])
 {
     // testCompoundLayout();
     // testSimpleProgram();
     testSema();
+    // testTacGen();
 }

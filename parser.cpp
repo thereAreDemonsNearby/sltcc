@@ -684,6 +684,8 @@ std::shared_ptr<ASTNode> Parser::parseFuncDeclOrDef(std::shared_ptr<Type> retTyp
     } else if (tokens_.peek().type() == Token::LBrace) {
         // function def {
         return parseFuncDef(headInfo, &tok);
+    } else {
+        throw Error(&tokens_.peek(), "unexpected character after function head");
     }
 }
 

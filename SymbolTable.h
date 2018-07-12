@@ -12,7 +12,7 @@
 class Type;
 class Token;
 
-struct Entry
+struct SymtabEntry
 {
     std::string const* pname;
     std::shared_ptr<Type> type;
@@ -23,10 +23,10 @@ struct Entry
     Tac::Reg boundTo;
 
     bool isParam = false;
-    int paramNum;
+    int seq;
 
     Token const* position;
-    Entry(std::shared_ptr<Type> ty, Token const* p, int lv)
+    SymtabEntry(std::shared_ptr<Type> ty, Token const* p, int lv)
             : type(std::move(ty)), position(p), level(lv) {}
 };
 
@@ -36,8 +36,8 @@ public:
     explicit SymbolTable(SymbolTable* outer);
     virtual ~SymbolTable() = default;
     // empty shared_ptr means not found
-    virtual Entry* find(const std::string& name) = 0;
-    virtual Entry* findInCurr(const std::string& name) = 0;
+    virtual SymtabEntry* find(const std::string& name) = 0;
+    virtual SymtabEntry* findInCurr(const std::string& name) = 0;
     virtual bool insert(const std::string&, const std::shared_ptr<Type>& type, Token const*) = 0;
     virtual bool insertOrAssign(const std::string&, const std::shared_ptr<Type>& type, Token const*) = 0;
     virtual size_t erase(const std::string&) = 0;
@@ -56,34 +56,36 @@ class HashSymtab : public SymbolTable
 public:
     explicit HashSymtab(SymbolTable* outer, bool deeper = false);
     // empty shared_ptr means not found
-    Entry* find(const std::string& name) override;
-    Entry* findInCurr(const std::string& name) override;
+    SymtabEntry* find(const std::string& name) override;
+    SymtabEntry* findInCurr(const std::string& name) override;
     bool insert(const std::string&, const std::shared_ptr<Type>& type, Token const*) override;
     bool insertOrAssign(const std::string&, const std::shared_ptr<Type>&, Token const*) override {
         // TODO imple
+        return false;
     };
     size_t erase(const std::string&) override;
 
-    using iterator = std::unordered_map<std::string, Entry>::iterator;
+    using iterator = std::unordered_map<std::string, SymtabEntry>::iterator;
     iterator begin();
     iterator end();
 private:
-    std::unordered_map<std::string, Entry> table_;
+    std::unordered_map<std::string, SymtabEntry> table_;
     bool deeper_;
 };
 
 class ListSymtab : public SymbolTable
 {
 public:
-    using value_type = std::pair<std::string, Entry>;
+    using value_type = std::pair<std::string, SymtabEntry>;
     explicit ListSymtab(SymbolTable* outer = nullptr);
 
-    Entry* find(const std::string& name) override;
-    Entry* findInCurr(const std::string& name) override;
+    SymtabEntry* find(const std::string& name) override;
+    SymtabEntry* findInCurr(const std::string& name) override;
 
     bool insert(const std::string&, const std::shared_ptr<Type>&, Token const*) override;
     bool insertOrAssign(const std::string&, const std::shared_ptr<Type>&, Token const*) override {
         // TODO imple
+        return false;
     }
     size_t erase(const std::string&) override;
 

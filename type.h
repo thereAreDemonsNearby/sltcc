@@ -59,28 +59,16 @@ public:
     virtual bool equalUnqual(const std::shared_ptr<Type>& t) = 0;
     bool equal(const std::shared_ptr<Type>& t);
 
-//    // some tables for type casting:
-//    // void means illegal
-//    static const int TagToCat[9];
-//
-//    static const int PosNeg_ResultType[15];
-//
-//    static const int Not_ResultType[15];
-//
-//    static const int BitInv_ResultType[15];
-//
-//
-//    // some frequently used types:
-//    static std::shared_ptr<BuiltInType> FU_SInt();
-//    static std::shared_ptr<BuiltInType> FU_UInt();
-//    static std::shared_ptr<BuiltInType> FU_SChar();
-//    static std::shared_ptr<PointerType> FU_SCharCP();
+    virtual std::shared_ptr<Type> shallowCopy() const {
+        assert(false);
+    }
 
     static bool isInteger(const std::shared_ptr<Type>& ty);
 	static bool isFloating(const std::shared_ptr<Type>& ty);
     static bool isVoid(const std::shared_ptr<Type>& ty);
     static bool isArithmetic(const std::shared_ptr<Type>& ty);
     static bool isPointer(const std::shared_ptr<Type>& ty);
+    static bool isArray(const std::shared_ptr<Type>& ty);
     static bool isScalar(const std::shared_ptr<Type>& ty);
     static std::shared_ptr<PointerType> arrayDecay(const std::shared_ptr<Type>& ty);
     static std::shared_ptr<Type> derefIfUserDefined(const std::shared_ptr<Type>& ty);
@@ -112,7 +100,10 @@ public:
 
     Category cat() const { return cat_; }
     std::string toString() const override;
-    std::shared_ptr<BuiltInType> clone() const;
+    std::shared_ptr<BuiltInType> builtinClone() const;
+    std::shared_ptr<Type> shallowCopy() const override {
+        return builtinClone();
+    }
 
     bool equalUnqual(const std::shared_ptr<Type>& t) override;
 
@@ -153,6 +144,11 @@ public:
     std::string toString() const override;
 
     bool equalUnqual(const std::shared_ptr<Type>& t) override;
+
+    std::shared_ptr<Type> shallowCopy() const override {
+        return std::make_shared<PointerType>(base_, qualifiers_);
+    }
+
     static std::shared_ptr<PointerType> strLiteralType();
 private:
 	std::shared_ptr<Type> base_;
@@ -171,6 +167,9 @@ public:
     std::string toString() const override;
 
     bool equalUnqual(const std::shared_ptr<Type>& rhs) override;
+    std::shared_ptr<Type> shallowCopy() const override {
+        return std::make_shared<ArrayType>(base_, len_, qualifiers_);
+    }
 private:
 	std::shared_ptr<Type> base_;
 	size_t len_;
@@ -252,6 +251,9 @@ public:
 //    int typeCode() const override { return (int)Category::User; }
 	const std::string& typeName() { return typeName_; }
 	SymbolTable& scope() { return *scope_; }
+	std::shared_ptr<Type> shallowCopy() const override {
+	    return std::make_shared<UserDefinedTypeRef>(typeName_, scope_, qualifiers_, width_);
+	}
 private:
     std::string typeName_;
     SymbolTable* scope_;
@@ -299,9 +301,9 @@ public:
     explicit AliasType(std::string, const std::shared_ptr<Type>&);
     std::shared_ptr<Type> base() const;
 
-    std::string toString() const override {};
+    std::string toString() const override { return "" ;};
 
-    bool equalUnqual(const std::shared_ptr<Type>& t) override { /*TODO : implement*/};
+    bool equalUnqual(const std::shared_ptr<Type>& t) override { /*TODO : implement*/ return false;};
 //    int typeCode() const override { return (int)Category::User; }
 private:
     std::string name_;
@@ -315,9 +317,9 @@ public:
     EnumType(std::string, std::initializer_list<value_type>);
     int value(const std::string&) const;
 
-    std::string toString() const override {};
+    std::string toString() const override {return "";};
 
-    bool equalUnqual(const std::shared_ptr<Type>& t) override {/*TODO : implement*/};
+    bool equalUnqual(const std::shared_ptr<Type>& t) override {/*TODO : implement*/return false;};
 //    int typeCode() const override { return (int)Category::User; }
 private:
     std::string name_;

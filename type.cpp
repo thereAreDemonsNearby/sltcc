@@ -148,6 +148,11 @@ bool Type::isScalar(const std::shared_ptr<Type>& ty)
             || toTest->tag() == Type::Enum;
 }
 
+bool Type::isArray(const std::shared_ptr<Type>& ty)
+{
+    return ty->tag() == Type::Array;
+}
+
 // null means error: incompatible type specifiers
 std::shared_ptr<BuiltInType> BuiltInType::make(SpecifierHolder spec,
                                                QualifierHolder qh)
@@ -250,7 +255,7 @@ BuiltInType::BuiltInType(BuiltInType::Category cat, bool isUnsigned, size_t widt
     }
 }
 
-std::shared_ptr<BuiltInType> BuiltInType::clone() const
+std::shared_ptr<BuiltInType> BuiltInType::builtinClone() const
 {
     return std::make_shared<BuiltInType>(cat_, isUnsigned_, width_, qualifiers_);
 }
@@ -493,7 +498,7 @@ int EnumType::value(const std::string& name) const
             return item.second;
         }
     }
-
+    assert(false);
 }
 
 

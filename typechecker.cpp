@@ -209,7 +209,7 @@ void TypeChecker::visit(BinaryOpExpr* node)
         }
         auto rhsTy = static_cast<BuiltInType*>(rhs->evalType.get());
         if (!rhsTy->isUnsigned()) {
-            auto beUnsigned = rhsTy->clone();
+            auto beUnsigned = rhsTy->builtinClone();
             beUnsigned->isUnsigned(true);
             rhs->promotedTo = beUnsigned;
         }
@@ -323,23 +323,28 @@ void TypeChecker::visit(MemberExpr* node)
 
     auto typeEnt = scope.findInCurr(name);
     if (!typeEnt) {
-        throw Error(node->tok(), "a nonexist compound type????");
+        throw Error(node->tok(), "a nonexistent compound type????");
     }
     auto realType = typeEnt->type;
     if (realType->tag() != Type::Compound) {
-        throw Error(node->tok(), "variable of this type don't have any member");
+        throw Error(node->tok(), "variables of this type don't have any member");
     }
 
     auto compound = static_cast<CompoundType*>(realType.get());
     auto memberEnt = compound->members().find(node->memberName_);
     if (!memberEnt) {
         throw Error(node->tok(),
-                    std::string("variable of such type don't have a member called")
+                    std::string("variables of such type don't have a member called")
                     + node->memberName_);
     }
 
-    node->isLValue = true;
-    node->evalType = memberEnt->type;
+    node->isLValue = node->compound_->isLValue;
+    if (!lhs->evalType->isConst())
+        node->evalType = memberEnt->type;
+    else {
+        node->evalType = memberEnt->type->shallowCopy();
+        node->evalType->isConst(true);
+    }
 }
 
 void TypeChecker::visit(ArrayRefExpr* node)
@@ -453,10 +458,10 @@ void TypeChecker::visit(EnumDef* node)
 void TypeChecker::visit(FuncDef* node)
 {
     currFunc_ = node;
-    int n = 1;
+    auto n = 1;
     for (auto& param : node->params_) {
         param.second.isParam = true;
-        param.second.paramNum = n++;
+        param.second.seq = n++;
     }
     node->body_->accept(*this);
 }
@@ -524,7 +529,7 @@ TypeChecker::checkPointerArith(Expr* parent,
                                const std::shared_ptr<Expr>& pointer, const std::shared_ptr<Expr>& arith)
 {
     parent->evalType = pointer->evalType;
-    auto expanded = static_cast<BuiltInType*>(arith->evalType.get())->clone();
+    auto expanded = static_cast<BuiltInType*>(arith->evalType.get())->builtinClone();
     expanded->width(PTRSIZE);
     if (!arith->evalType->equalUnqual(expanded))
         arith->promotedTo = std::move(expanded);

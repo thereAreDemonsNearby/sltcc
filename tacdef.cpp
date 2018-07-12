@@ -6,12 +6,13 @@ namespace Tac
 {
 
 static const char* strfy[] = {
-        "nop", "labelline", "loadr", "loadrc", "loadrr", "loadi",
-        "loadru", "loadrcu", "loadrru", "loadiu", "storer", "storerc", "storerr",
-        "add", "sub", "mul", "divu", "divs", "modu", "mods", "shl", "shrl", "shra",
-        "band", "bor", "bxor", "binv", "movrr", "extu", "exts", "cmp", "jmp",
-        "jeq", "jne", "jgs", "jges", "jls", "jles", "jgu", "jgeu", "jlu", "jleu",
-        "call", "retval", "getarg", "getargp", "putarg", "putargstk",
+        "nop", "labelline", "loadr", "loadrc", "loadi", "loadru", "loadrcu",
+        "loadiu", "storer", "storerc", "add", "sub", "mul", "divu",
+        "divs", "modu", "mods", "shl", "shrl", "shra", "band",
+        "bor", "bxor", "binv", "movrr", "extu", "exts", "jmp",
+        "jeq", "jne", "jgs", "jges", "jls", "jles", "jgu",
+        "jgeu", "jlu", "jleu", "call", "ret", "loadvarptr", "stkalloc",
+        "flushstkalloc", "getparamval", "getparamptr",
 };
 
 Var::Var(Reg r) : tag(TReg), uvar(r)
@@ -22,7 +23,7 @@ Var::Var(int64_t imm) : tag(TImmi), uvar(imm)
 {
 }
 
-Var::Var(Entry* s) : tag(TVar), uvar(s)
+Var::Var(SymtabEntry* s) : tag(TVar), uvar(s)
 {
 }
 
@@ -30,7 +31,9 @@ Var::Var(Label l) : tag(TLbl), uvar(l)
 {
 }
 
-const Var Var::empty(TNone);
+Var::Var(StringPoolEntry* e) : tag(TPool), uvar(e) {}
+
+const Var Var::empty{};
 
 std::string Var::toString() const
 {
@@ -38,13 +41,13 @@ std::string Var::toString() const
     case TReg:
         return std::get<Reg>(uvar).toString();
     case TImmi:
-        return std::to_string(std::get<int>(uvar));
+        return std::to_string(std::get<int64_t>(uvar));
     case TVar:
-        return *std::get<Entry*>(uvar)->pname;
+        return *std::get<SymtabEntry*>(uvar)->pname;
     case TLbl:
         return std::get<Label>(uvar).toString();
     case TPool:
-        return ".STRCONST";
+        return std::string(".STRCONST \"") + *std::get<StringPoolEntry*>(uvar)->sptr + "\"";
     case TNone:
         return " ";
     default:
@@ -61,12 +64,6 @@ bool Var::operator==(const Var& rhs) const
     }
 }
 
-Var::Var(StringPoolEntry* e)
-    : uvar(e)
-{
-
-}
-
 std::string Label::toString() const
 {
     return std::string(".label") + std::to_string(n);
@@ -81,7 +78,8 @@ bool Label::operator==(Label rhs) const
 std::string Reg::toString() const
 {
     std::string ret{"%r"};
-    switch (n) {
+    ret += std::to_string(n);
+/*    switch (n) {
     case PArg:
         ret += "arg";
         break;
@@ -93,7 +91,7 @@ std::string Reg::toString() const
         break;
     default:
         assert(false);
-    }
+    }*/
     return ret;
 }
 
@@ -141,6 +139,22 @@ std::string Function::toString() const
     return ret;
 }
 
+std::size_t Function::stkAlloc(std::shared_ptr<Type> ty)
+{
+    auto ret = tempPool_.size;
+    tempPool_.pool.emplace_back(std::move(ty));
+    tempPool_.size++;
+    return ret;
+}
+
+void Function::stkDisalloc(std::size_t last)
+{
+    for (auto i = tempPool_.liveBegin; i <= last; ++i) {
+        tempPool_.pool[i].expired = true;
+    }
+    tempPool_.liveBegin = last + 1;
+}
+
 std::string TacIR::toString() const
 {
     std::string ret;
@@ -157,6 +171,7 @@ StringPoolEntry* StringPool::findOrInsert(const std::string& str)
     if (iter == pool_.end()) {
         auto [pos, inserted] = pool_.insert({std::move(str), StringPoolEntry()});
         assert(inserted);
+        pos->second.sptr = &pos->first;
         return &pos->second;
     } else {
         return &iter->second;

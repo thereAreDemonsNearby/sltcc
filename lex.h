@@ -34,12 +34,12 @@ public:
 
 	bool hasNext() const { return pos_ < toks_.size(); }
 
-    std::vector<Token>::iterator curr() { toks_.begin() + pos_; }
-    std::vector<Token>::iterator end() { toks_.end(); }
+    std::vector<Token>::iterator curr() { return toks_.begin() + pos_; }
+    std::vector<Token>::iterator end() { return toks_.end(); }
 
 	// for backtracing
 	size_t pos() const { return pos_; }
-	size_t pos(size_t p) { pos_ = p; }
+	void pos(size_t p) { pos_ = p; }
 
 	const std::string text() const { return text_; }
 

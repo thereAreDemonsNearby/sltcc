@@ -16,7 +16,7 @@ HashSymtab::HashSymtab(SymbolTable* outer, bool deeper)
     : SymbolTable(outer), deeper_(deeper)
 {}
 
-Entry* HashSymtab::findInCurr(const std::string& name)
+SymtabEntry* HashSymtab::findInCurr(const std::string& name)
 {
     auto res = table_.find(name);
     if (res != table_.end()) {
@@ -27,7 +27,7 @@ Entry* HashSymtab::findInCurr(const std::string& name)
     }
 }
 
-Entry* HashSymtab::find(const std::string& name)
+SymtabEntry* HashSymtab::find(const std::string& name)
 {
     auto ptr = findInCurr(name);
     if (ptr) {
@@ -79,7 +79,7 @@ ListSymtab::ListSymtab(SymbolTable* outer)
 
 
 
-Entry* ListSymtab::findInCurr(const std::string& name)
+SymtabEntry* ListSymtab::findInCurr(const std::string& name)
 {
     auto found = std::find_if(table_.begin(), table_.end(), [&name](const value_type& v) {
         return v.first == name;
@@ -91,7 +91,7 @@ Entry* ListSymtab::findInCurr(const std::string& name)
     }
 }
 
-Entry* ListSymtab::find(const std::string& name)
+SymtabEntry* ListSymtab::find(const std::string& name)
 {
     auto ptr = findInCurr(name);
     if (ptr) {

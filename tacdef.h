@@ -10,9 +10,10 @@
 #include <vector>
 #include <map>
 #include <cinttypes>
+#include <optional>
 #include "platform.h"
 
-struct Entry;
+struct SymtabEntry;
 class ListSymtab;
 class Type;
 
@@ -26,25 +27,27 @@ enum Opcode
 {
     Nop,
     LabelLine,
-    Loadr, Loadrc, Loadrr, Loadi,
-    Loadru, Loadrcu, Loadrru, Loadiu,
-    Storer, Storerc, Storerr,
+    Loadr, Loadrc, Loadi,
+    Loadru, Loadrcu, Loadiu,
+    Storer, Storerc,
     Add, Sub, Mul, Divu, Divs, Modu, Mods,
     Shl, Shrl, Shra, BAnd, BOr, BXor, BInv,
     Movrr,
     Extu, Exts,
-    Cmp, Jmp, Jeq, Jne, Jgs, Jges, Jls, Jles,
-    Jgu, Jgeu, Jlu, Jleu, Call, RetVal, /** return a value in register : retval %r1*/
-    GetArg, GetArgP,
-    PutArg, PutArgStk,
+    Jmp, Jeq, Jne, Jgs, Jges, Jls, Jles,
+    Jgu, Jgeu, Jlu, Jleu,
+    Call, /** call funcent empty reg */
+    Ret, /** return a value in register : retval %r1*/
+    LoadVarPtr, /// LoadVarAddr ent empty reg
+    StkAlloc,    /// Alloca emp emp reg(ptr to allocated mem)
+    FlushStkAlloc, /// Disalloca  lastnum
+    /** 用于从函数体内获得参数的值或地址 */
+    /** num 算上返回值变成的参数 */
+    GetParamVal, GetParamPtr, /// GetParam* num empty reg
 };
 
 struct Reg
 {
-    enum
-    {
-        PArg = -1, PFrame = -2, PStack = -3
-    };
     int n; // if name >= 0, general register
     explicit Reg(int r = 0) : n(r) {}
     std::string toString() const;
@@ -67,12 +70,13 @@ struct Var
     } tag;
 
     /// int64 : big enough
-    std::variant<Reg, int64_t, Entry*, Label> uvar;
+    std::variant<Reg, int64_t, SymtabEntry*,
+            Label, StringPoolEntry*> uvar;
 
     Var() : tag(TNone) {}
     Var(Reg r);
     Var(int64_t imm);
-    Var(Entry* s);
+    Var(SymtabEntry* s);
     Var(Label l);
     Var(StringPoolEntry* e);
     std::string toString() const;
@@ -80,13 +84,25 @@ struct Var
     static const Var empty;
 };
 
+enum class PassBy
+{
+    Value, ValuePtr
+};
+
+struct ArgPassingSpec
+{
+    std::vector<std::pair<Reg, PassBy>> list;
+};
+
 struct Quad
 {
     Opcode op;
-    int width;
+    std::size_t width;
     Var opnd1;
     Var opnd2;
     Var res;
+    // only available when op is "Call"
+    std::optional<ArgPassingSpec> passingSpec;
 
     Quad()
     {
@@ -94,7 +110,7 @@ struct Quad
     }
 
     Quad(Opcode optor, Var v1 = Var::empty,
-         Var v2 = Var::empty, Var r = Var::empty, int sw = PTRSIZE)
+         Var v2 = Var::empty, Var r = Var::empty, std::size_t sw = PTRSIZE)
             : op(optor), opnd1(v1), opnd2(v2), res(r), width(sw)
     {}
     std::string toString() const;
@@ -107,24 +123,46 @@ struct Quad
     std::vector<std::list<Quad>::iterator> successors;
 };*/
 
+
+struct StkAllocUnit
+{
+    std::shared_ptr<Type> type;
+    bool expired = false;
+
+    StkAllocUnit(std::shared_ptr<Type> t) : type(std::move(t)) {}
+};
+
+struct StkAllocManager
+{
+    std::vector<StkAllocUnit> pool;
+    std::size_t liveBegin = 0;
+    std::size_t size = 0;
+};
+
 struct Function
 {
-
+private:
+    StkAllocManager tempPool_;
+public:
     // TODO global variable holder
     std::string name;
     ListSymtab* params;
     std::shared_ptr<Type> retType;
-    std::list<Quad> quads;
-    std::vector<Entry*> local;
 
-    explicit Function(std::string n, ListSymtab* a)
-            : name(std::move(n)), params(a) {}
+    std::list<Quad> quads;
+    std::vector<SymtabEntry*> local;
+
+    explicit Function(std::string n, ListSymtab* a, std::shared_ptr<Type> ret)
+            : name(std::move(n)), params(a), retType(std::move(ret)) {}
     std::string toString() const;
+    std::size_t stkAlloc(std::shared_ptr<Type> ty);
+    void stkDisalloc(std::size_t last);
 };
 
 struct StringPoolEntry
 {
     /// more fields may be added in the future
+    const std::string* sptr = nullptr;
 };
 
 class StringPool
