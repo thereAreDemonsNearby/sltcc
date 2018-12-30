@@ -155,7 +155,7 @@ void Function::stkDisalloc(std::size_t last)
     tempPool_.liveBegin = last + 1;
 }
 
-std::string TacIR::toString() const
+std::string LinearTacIR::toString() const
 {
     std::string ret;
     for (const auto& f : funcs) {

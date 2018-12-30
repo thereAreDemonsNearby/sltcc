@@ -62,9 +62,9 @@ void TypeChecker::visit(SwitchStmt* node)
 
 void TypeChecker::visit(ReturnStmt* node)
 {
-    node->ret_->accept(*this);
+    node->retExpr_->accept(*this);
     node->func_ = currFunc_;
-    checkAssignE2T(node->ret_, node->func_->type_->retType(), true);
+    checkAssignE2T(node->retExpr_, node->func_->type_->retType(), true);
 }
 
 void TypeChecker::visit(BreakStmt* node)

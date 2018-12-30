@@ -97,7 +97,7 @@ void SwitchStmt::accept(Visitor& v)
 }
 
 ReturnStmt::ReturnStmt(const Token* tok, const std::shared_ptr<Expr>& expr)
-    : Stmt(tok), ret_(expr)
+    : Stmt(tok), retExpr_(expr)
 {
 }
 

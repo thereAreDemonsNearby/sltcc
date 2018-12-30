@@ -78,7 +78,7 @@ void ParenfulPrinter::visit(SwitchStmt* node)
 void ParenfulPrinter::visit(ReturnStmt* node)
 {
     cout << "(return ";
-    node->ret_->accept(*this);
+    node->retExpr_->accept(*this);
     cout << ")\n";
 }
 

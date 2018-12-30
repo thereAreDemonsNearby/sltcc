@@ -9,7 +9,7 @@
 class TacGenerator : public Visitor
 {
 public:
-    Tac::TacIR& ir() { return ir_; }
+    Tac::LinearTacIR& ir() { return ir_; }
 
     void visit(ASTRoot* node) override;
     void visit(FuncDef* node) override;
@@ -29,7 +29,7 @@ public:
     Tac::StringPool& strPool() { return ir_.strPool; }
 private:
     std::stack<SymbolTable*> scopeStack_;
-    Tac::TacIR ir_;
+    Tac::LinearTacIR ir_;
 };
 
 class FuncGenerator : public Visitor
@@ -102,6 +102,7 @@ class FuncUtil
 {
 protected:
     FuncGenerator& funcGenerator_;
+
     FuncUtil(FuncGenerator& f) : funcGenerator_(f) {}
     Tac::Reg nextReg() { return funcGenerator_.nextReg(); }
     Tac::Label nextLabel() { return funcGenerator_.nextLabel(); }
@@ -131,9 +132,9 @@ private:
     bool when_;
     Tac::Label goto_;
 
-    Tac::Opcode comparator(Token::OperatorType op,
-                           const std::shared_ptr<Expr>& lhs,
-                           const std::shared_ptr<Expr>& rhs);
+    Tac::Opcode genJumpInst(Token::OperatorType op,
+                            const std::shared_ptr<Expr>& lhs,
+                            const std::shared_ptr<Expr>& rhs);
     void implicitCond(Tac::Reg, const std::shared_ptr<Type>&);
 };
 
@@ -141,6 +142,12 @@ private:
  * 但是没办法，我们得为它分配内存，所以扔在LValueGenerator里？
  */
 
+/**
+ * 对于标量，返回一份其拷贝
+ * 对于非标量：
+ *     对于数组，其值即其地址，返回其地址
+ *     对于struct & union：这种情况不由ValueGenerator处理，假设不可能遇到。
+ * */
 class ValueGenerator : public Visitor, public FuncUtil
 {
 public:

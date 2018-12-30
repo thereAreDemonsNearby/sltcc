@@ -6,7 +6,6 @@
 #include <string>
 #include <list>
 #include <memory>
-// #include <boost/variant.hpp>
 #include <vector>
 #include <map>
 #include <cinttypes>
@@ -27,20 +26,21 @@ enum Opcode
 {
     Nop,
     LabelLine,
-    Loadr, Loadrc, Loadi,
+    Loadr /** load value. The address is specified by a register.*/,
+    Loadrc /** load value. The address is specified by a register and an offset */,
+    Loadi /** load an immidiate number */,
     Loadru, Loadrcu, Loadiu,
     Storer, Storerc,
     Add, Sub, Mul, Divu, Divs, Modu, Mods,
     Shl, Shrl, Shra, BAnd, BOr, BXor, BInv,
     Movrr,
-    Extu, Exts,
+    Extu, Exts, /// 扩展指令代表将一定长度（由指令的width字段指出）的半字或字节扩展到字长
     Jmp, Jeq, Jne, Jgs, Jges, Jls, Jles,
     Jgu, Jgeu, Jlu, Jleu,
     Call, /** call funcent empty reg */
     Ret, /** return a value in register : retval %r1*/
-    LoadVarPtr, /// LoadVarAddr ent empty reg
-    StkAlloc,    /// Alloca emp emp reg(ptr to allocated mem)
-    FlushStkAlloc, /// Disalloca  lastnum
+    LoadVarPtr, /// LoadVarPtr ent empty reg
+
     /** 用于从函数体内获得参数的值或地址 */
     /** num 算上返回值变成的参数 */
     GetParamVal, GetParamPtr, /// GetParam* num empty reg
@@ -84,35 +84,43 @@ struct Var
     static const Var empty;
 };
 
+/**
+  * PassBy的意义：
+  * Value：针对标量，直接寄存器传递就可以
+  * ValuePtr: 针对struct，Call指令里的寄存器只表示对象的地址。
+  *           因为在目前的 ir 架构中，struct只能放在内存里，只能用其地址去标记它。*/
+
 enum class PassBy
 {
     Value, ValuePtr
 };
 
-struct ArgPassingSpec
-{
-    std::vector<std::pair<Reg, PassBy>> list;
-};
+using ArgPassingSpec = std::vector<std::pair<Reg, PassBy>>;
 
 struct Quad
 {
     Opcode op;
     std::size_t width;
+
     Var opnd1;
     Var opnd2;
     Var res;
     // only available when op is "Call"
-    std::optional<ArgPassingSpec> passingSpec;
+    std::unique_ptr<ArgPassingSpec> passingSpec;
 
-    Quad()
+    Quad() : op(Nop)
     {
-        op = Nop;
     }
 
     Quad(Opcode optor, Var v1 = Var::empty,
          Var v2 = Var::empty, Var r = Var::empty, std::size_t sw = PTRSIZE)
             : op(optor), opnd1(v1), opnd2(v2), res(r), width(sw)
     {}
+
+    void setPassingSpec(ArgPassingSpec&& args) {
+        passingSpec = std::make_unique<ArgPassingSpec>(std::move(args));
+    }
+
     std::string toString() const;
     bool operator==(const Quad& rhs) const;
 };
@@ -155,8 +163,6 @@ public:
     explicit Function(std::string n, ListSymtab* a, std::shared_ptr<Type> ret)
             : name(std::move(n)), params(a), retType(std::move(ret)) {}
     std::string toString() const;
-    std::size_t stkAlloc(std::shared_ptr<Type> ty);
-    void stkDisalloc(std::size_t last);
 };
 
 struct StringPoolEntry
@@ -173,7 +179,7 @@ public:
     StringPoolEntry* findOrInsert(const std::string&);
 };
 
-struct TacIR
+struct LinearTacIR
 {
     StringPool strPool;
     std::vector<Function> funcs;

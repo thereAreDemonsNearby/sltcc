@@ -16,7 +16,7 @@ struct SymtabEntry
 {
     std::string const* pname;
     std::shared_ptr<Type> type;
-    int level;
+    int level; /// level 0 means global scope
 
     bool ambiguous = false;
     size_t offset;

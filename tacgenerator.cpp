@@ -221,7 +221,7 @@ void FuncGenerator::visit(BinaryOpExpr* node)
                 emit({Tac::Movrr, rhsGen.value(), Tac::Var::empty, lhsGen.addr()});
             }
         } else {
-            auto ty = Type::derefIfUserDefined(node->lhs_->evalType);
+            auto ty = Type::derefIfIsUserDefinedType(node->lhs_->evalType);
             assert(ty->tag() == Type::Compound);
             assert(node->lhs_->evalType->equalUnqual(node->rhs_->evalType));
 
@@ -308,14 +308,14 @@ void FuncGenerator::visit(ReturnStmt* node)
 {
     if (Type::isScalar(node->func_->type_->retType())) {
         ValueGenerator vg(*this);
-        node->ret_->accept(vg);
+        node->retExpr_->accept(vg);
         emit({Tac::Ret, vg.value()});
     } else {
-        auto ty = Type::derefIfUserDefined(node->func_->type_->retType());
+        auto ty = Type::derefIfIsUserDefinedType(node->func_->type_->retType());
         auto compoundTy = static_cast<CompoundType*>(ty.get());
         assert(ty->tag() == Type::Compound);
         LValueGenerator retGen(*this);
-        node->ret_->accept(retGen);
+        node->retExpr_->accept(retGen);
         assert(retGen.inMemory());
         auto ptr = nextReg();
         /// 返回非标量是通过在第一个参数的位置传指针实现的
@@ -381,7 +381,7 @@ void BranchGenerator::visit(BinaryOpExpr* node)
         node->rhs_->accept(vgr);
         Tac::Reg lhs = vgl.value(),
                 rhs = vgr.value();
-        Tac::Opcode op = comparator(node->operator_, node->lhs_, node->rhs_);
+        Tac::Opcode op = genJumpInst(node->operator_, node->lhs_, node->rhs_);
         emit({op, lhs, rhs, goto_});
         break;
     }
@@ -463,8 +463,8 @@ void BranchGenerator::visit(SizeofExpr* node)
 
 
 Tac::Opcode
-BranchGenerator::comparator(Token::OperatorType op,
-                            const std::shared_ptr<Expr>& lhs, const std::shared_ptr<Expr>& rhs)
+BranchGenerator::genJumpInst(Token::OperatorType op,
+                             const std::shared_ptr<Expr>& lhs, const std::shared_ptr<Expr>& rhs)
 {
     auto& lhsTy = ExprType(lhs);
     auto& rhsTy = ExprType(rhs);
@@ -576,7 +576,7 @@ Tac::Reg ValueGenerator::cast(Tac::Reg reg,
                               const std::shared_ptr<Type>& from, const std::shared_ptr<Type>& to,
                               bool inplace)
 {
-    /** return reg; is a kind of optimization of """
+    /** return reg; is a kind of optimization of:
       * auto dest = nextReg();
       * emit({Tac::Movrr, reg, Tac::Var::empty, dest});
       * return dest; """
@@ -634,8 +634,8 @@ void ValueGenerator::visit(UnaryOpExpr* node)
 {
     auto op = node->operator_;
     if (op == Token::BitAnd) {
-        // &
-        if (node->operand_->evalType->tag() == Type::Array) {
+        /// & 取地址
+        if (Type::isArray(node->operand_->evalType)) {
             assert(!node->operand_->promotedTo);
             ValueGenerator vg(funcGenerator_);
             node->operand_->accept(vg);
@@ -679,10 +679,11 @@ void ValueGenerator::visit(UnaryOpExpr* node)
             break;
 
         case Token::Mult: {
-            /// *
+            /// * dereference
             assert(Type::isPointer(node->operand_->evalType));
             auto ptrTy = static_cast<PointerType*>(node->operand_->evalType.get());
-            if (ptrTy->base()->tag() == Type::Array) {
+            if (Type::isArray(ptrTy->base())) {
+                /// 数组的地址即是数组名的值
                 reg_ = res;
             } else {
                 auto width = node->evalType->width();
@@ -815,12 +816,13 @@ void ValueGenerator::visit(MemberExpr* node)
 
     assert(node->compound_->evalType->tag() == Type::UserDefined);
     auto ty = static_cast<CompoundType*>(
-                Type::derefIfUserDefined(node->compound_->evalType).get());
+            Type::derefIfIsUserDefinedType(node->compound_->evalType).get());
     auto memberEnt = ty->members().find(node->memberName_);
     auto offset = memberEnt->offset;
 
     reg_ = nextReg();
     if (node->evalType->tag() == Type::Array) {
+        /// 对数组，值即其地址
         emit({Tac::Add, base, offset, reg_});
     } else {
         assert(Type::isScalar(node->evalType));
@@ -897,8 +899,9 @@ void ValueGenerator::visit(VarExpr* node)
         } else {
             if (varEnt->ambiguous) {
                 reg_ = nextReg();
+                emit({Tac::LoadVarPtr, varEnt, Tac::Var::empty, reg_});
                 emit({properLoadInst(node->evalType, Tac::Loadr),
-                      varEnt, Tac::Var::empty, reg_});
+                      reg_, Tac::Var::empty, reg_});
                 inplace = true;
             } else {
                 reg_ = varEnt->boundTo;
@@ -908,7 +911,8 @@ void ValueGenerator::visit(VarExpr* node)
 
     if (node->promotedTo) {
         // need cast
-        // reg_ may be bound to a variable, in this case the following call should not in-place
+        /// reg_ may be bound to a variable,
+        /// in this case the following call should be done with inplace = false
         reg_ = cast(reg_, node->evalType, node->promotedTo, inplace);
     }
 }
@@ -986,28 +990,26 @@ void ValueGenerator::visit(FuncCallExpr* node)
     auto scalarRet = Type::isScalar(node->evalType);
     if (!scalarRet && !Type::isVoid(node->evalType)) {
         /// return type is struct or union
-        auto ty = Type::derefIfUserDefined(node->evalType);
+        auto ty = Type::derefIfIsUserDefinedType(node->evalType);
         assert(ty->tag() == Type::Compound);
         auto compoundTy = static_cast<CompoundType*>(ty.get());
         auto width = compoundTy->width();
 
-        /// alloc space for return value:
-        emit({Tac::StkAlloc, Tac::Var::empty, Tac::Var::empty, reg_});
-        funcGenerator_.func().stkAlloc(ty);
+        // TODO : How to allocate memory for return value?
         /// and let addr be the first parameter
-        args.list.push_back({reg_, Tac::PassBy::Value});
+        args.push_back({reg_, Tac::PassBy::Value});
     }
 
     for (auto& arg: node->args_) {
         if (Type::isScalar(ExprType(arg)) || Type::isArray(ExprType(arg))) {
             ValueGenerator valGen(funcGenerator_);
             arg->accept(valGen);
-            args.list.push_back({valGen.value(), Tac::PassBy::Value});
+            args.push_back({valGen.value(), Tac::PassBy::Value});
         } else {
             // is struct or union. pass struct or union by value.
             LValueGenerator ptrGen(funcGenerator_);
             arg->accept(ptrGen);
-            args.list.push_back({ptrGen.addr(), Tac::PassBy::ValuePtr});
+            args.push_back({ptrGen.addr(), Tac::PassBy::ValuePtr});
         }
     }
 
@@ -1016,9 +1018,10 @@ void ValueGenerator::visit(FuncCallExpr* node)
     } else if (Type::isVoid(node->evalType)) {
         emit({Tac::Call, funcEnt});
     } else {
+        // return value is compound type
         emit({Tac::Call, funcEnt});
     }
-    lastQuad()->passingSpec = std::move(args);
+    lastQuad()->setPassingSpec(std::move(args));
 }
 
 void LValueGenerator::visit(ArrayRefExpr* node)
@@ -1077,7 +1080,7 @@ void LValueGenerator::visit(MemberExpr* node)
     auto base = baseGen.addr(); assert(baseGen.inMemory());
     assert(node->compound_->evalType->tag() == Type::UserDefined);
     auto ty = static_cast<CompoundType*>(
-            Type::derefIfUserDefined(node->compound_->evalType).get());
+            Type::derefIfIsUserDefinedType(node->compound_->evalType).get());
     auto memberEnt = ty->members().find(node->memberName_);
     auto offset = memberEnt->offset;
 

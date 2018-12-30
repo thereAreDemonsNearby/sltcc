@@ -3,7 +3,7 @@
 
 #include <cstddef>
 
-// count using byte
+// measurement: byte
 constexpr std::size_t WORDSIZE = 2;
 constexpr std::size_t CHARSIZE = 1;
 constexpr std::size_t SHORTSIZE = 2;

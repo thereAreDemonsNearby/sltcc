@@ -131,7 +131,7 @@ bool Type::isFloating(const std::shared_ptr<Type>& ty)
            && static_cast<BuiltInType*>(ty.get())->isFloating();
 }
 
-std::shared_ptr<Type> Type::derefIfUserDefined(const std::shared_ptr<Type>& ty)
+std::shared_ptr<Type> Type::derefIfIsUserDefinedType(const std::shared_ptr<Type>& ty)
 {
     if (ty->tag() != Type::UserDefined)
         return ty;
@@ -143,7 +143,7 @@ std::shared_ptr<Type> Type::derefIfUserDefined(const std::shared_ptr<Type>& ty)
 
 bool Type::isScalar(const std::shared_ptr<Type>& ty)
 {
-    auto toTest = derefIfUserDefined(ty);
+    auto toTest = derefIfIsUserDefinedType(ty);
     return Type::isArithmetic(toTest) || Type::isPointer(toTest)
             || toTest->tag() == Type::Enum;
 }

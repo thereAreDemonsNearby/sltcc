@@ -71,7 +71,7 @@ public:
     static bool isArray(const std::shared_ptr<Type>& ty);
     static bool isScalar(const std::shared_ptr<Type>& ty);
     static std::shared_ptr<PointerType> arrayDecay(const std::shared_ptr<Type>& ty);
-    static std::shared_ptr<Type> derefIfUserDefined(const std::shared_ptr<Type>& ty);
+    static std::shared_ptr<Type> derefIfIsUserDefinedType(const std::shared_ptr<Type>& ty);
     static size_t alignAt(const std::shared_ptr<Type>& ty);
 protected:
 	const Tag tag_;
@@ -248,7 +248,6 @@ public:
     std::string toString() const override;
 
     bool equalUnqual(const std::shared_ptr<Type>& t) override;
-//    int typeCode() const override { return (int)Category::User; }
 	const std::string& typeName() { return typeName_; }
 	SymbolTable& scope() { return *scope_; }
 	std::shared_ptr<Type> shallowCopy() const override {
@@ -304,7 +303,6 @@ public:
     std::string toString() const override { return "" ;};
 
     bool equalUnqual(const std::shared_ptr<Type>& t) override { /*TODO : implement*/ return false;};
-//    int typeCode() const override { return (int)Category::User; }
 private:
     std::string name_;
     std::shared_ptr<Type> base_;
@@ -320,7 +318,7 @@ public:
     std::string toString() const override {return "";};
 
     bool equalUnqual(const std::shared_ptr<Type>& t) override {/*TODO : implement*/return false;};
-//    int typeCode() const override { return (int)Category::User; }
+
 private:
     std::string name_;
     std::vector<value_type> members_;
