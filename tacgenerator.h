@@ -26,7 +26,6 @@ public:
     void pushScope(SymbolTable* s) { scopeStack_.push(s); }
     void popScope() { scopeStack_.pop(); }
 
-    Tac::StringPool& strPool() { return ir_.strPool; }
 private:
     std::stack<SymbolTable*> scopeStack_;
     Tac::LinearTacIR ir_;
@@ -41,6 +40,21 @@ public:
             : tacGen_(tacgen),
               currFunction_(std::move(funcName), params, std::move(retType))
     {}
+
+    struct TempStackObjectDeallocGuard
+    {
+        FuncGenerator& fg_;
+        TempStackObjectDeallocGuard(FuncGenerator& fg) : fg_(fg) {
+            assert(fg_.tempStackObjects_.empty());
+        }
+
+        ~TempStackObjectDeallocGuard() {
+            auto so = fg_.tempStackObjects_.top();
+            fg_.tempStackObjects_.pop();
+            fg_.emit({Tac::Dealloca, so});
+        }
+    };
+
     Tac::Function& func() { return currFunction_; }
 
     void visit(FuncDef* node) override;
@@ -51,12 +65,12 @@ public:
     void visit(ForStmt* node) override;
     void visit(DoWhileStmt* node) override;
 
-    void visit(ReturnStmt* node) override;
-
     void visit(VarDef* node) override;
 
-    void visit(UnaryOpExpr* node) override;
+    void visit(ReturnStmt* node) override;
     void visit(BinaryOpExpr* node) override;
+    /// trivial. forward to ValueGenerator
+    void visit(UnaryOpExpr* node) override;
     void visit(FuncCallExpr* node) override;
     void visit(MemberExpr* node) override;
     void visit(ArrayRefExpr* node) override;
@@ -74,24 +88,26 @@ public:
     void visit(TypeAlias*) override {}
     void visit(FuncDecl*) override {}
 
-    // not implemented:
+    ///  not implemented:
     // void visit(LabelStmt* node) override;
     // void visit(CaseStmt* node) override;
     // void visit(SwitchStmt* node) override;
 
     Tac::Reg nextReg();
     Tac::Label nextLabel();
+    Tac::StackObject nextStackObject(size_t align, uint64_t size);
     SymbolTable& currScope() { return tacGen_.currScope(); }
     void pushScope(SymbolTable* s) { tacGen_.pushScope(s); }
     void popScope() { tacGen_.popScope(); }
     std::list<Tac::Quad>::iterator emit(const Tac::Quad& quad);
     std::list<Tac::Quad>::iterator lastQuad();
-    Tac::StringPool& strPool() { return tacGen_.strPool(); }
+    void pushTempStackObject(const Tac::StackObject& s) { tempStackObjects_.push(s); }
 
     TacGenerator& tacGenerator() { return tacGen_; }
 private:
     TacGenerator& tacGen_;
     Tac::Function currFunction_;
+    std::stack<Tac::StackObject> tempStackObjects_;
 
     int regNo_ = 0;
 
@@ -106,9 +122,14 @@ protected:
     FuncUtil(FuncGenerator& f) : funcGenerator_(f) {}
     Tac::Reg nextReg() { return funcGenerator_.nextReg(); }
     Tac::Label nextLabel() { return funcGenerator_.nextLabel(); }
+    Tac::StackObject nextStackObject(uint64_t size, size_t align)
+    {
+        return funcGenerator_.nextStackObject(size, align);
+    }
     SymbolTable& currScope() { return funcGenerator_.currScope(); }
     std::list<Tac::Quad>::iterator emit(const Tac::Quad& quad) { return funcGenerator_.emit(quad); }
     std::list<Tac::Quad>::iterator lastQuad() { return funcGenerator_.lastQuad(); }
+    void pushTempStackObject(const Tac::StackObject& s) { funcGenerator_.pushTempStackObject(s); }
 };
 
 class BranchGenerator : public Visitor, public FuncUtil

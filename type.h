@@ -44,7 +44,6 @@ public:
 	explicit Type(Tag, QualifierHolder);
 	virtual ~Type() {};
 
-	// non-virtual.
 	Tag tag() const;
 	bool isConst() const;
     void isConst(bool b);
@@ -226,7 +225,6 @@ public:
     }
 
     bool equalUnqual(const std::shared_ptr<Type>& t) override;
-//    int typeCode() const override { return (int)Category::User; }
 
     SymbolTable* whereDefined() { return whereDefined_; }
 private:

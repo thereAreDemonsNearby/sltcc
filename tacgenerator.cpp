@@ -146,16 +146,18 @@ std::list<Tac::Quad>::iterator FuncGenerator::lastQuad()
 
 Tac::Label FuncGenerator::nextLabel()
 {
-    // count from 1
-    static int labelNo = 1;
-    int ret = labelNo++;
-    return Tac::Label(ret);
+    return Tac::Label::next();
 }
+
+Tac::StackObject FuncGenerator::nextStackObject(uint64_t size, size_t align)
+{
+    static int stackObjectNo = 1;
+    return Tac::StackObject(stackObjectNo++, size, align);
+}
+
 
 void FuncGenerator::visit(FuncDef* node)
 {
-    // TODO see the parameters
-    // i mean if some of the parameters are passed by reg but ambiguous
     node->body_->accept(*this);
 }
 
@@ -164,13 +166,21 @@ void FuncGenerator::visit(VarDef* node)
     // TODO compute offset
     auto ent = currScope().find(node->name_);
     if (ent->ambiguous) {
-        currFunction_.local.push_back(ent);
+        auto size = node->type_->width();
+        auto align = Type::alignAt(node->type_);
+        auto stackMem = nextStackObject(size, align);
+        ent->irBinding = stackMem;
+        emit({Tac::Alloca, stackMem});
     } else {
         // struct union array should be in memory
         if (Type::isScalar(ent->type)) {
-            ent->boundTo = nextReg();
+            ent->irBinding = nextReg();
         } else {
-            currFunction_.local.push_back(ent);
+            auto size = node->type_->width();
+            auto align = Type::alignAt(node->type_);
+            auto stackMem = nextStackObject(size, align);
+            ent->irBinding = stackMem;
+            emit({Tac::Alloca, stackMem});
         }
     }
 
@@ -198,12 +208,16 @@ void FuncGenerator::visit(Block* node)
 
 void FuncGenerator::visit(UnaryOpExpr* node)
 {
+    TempStackObjectDeallocGuard guard(*this);
+
     ValueGenerator vg(*this);
     vg.visit(node);
 }
 
 void FuncGenerator::visit(BinaryOpExpr* node)
 {
+    TempStackObjectDeallocGuard guard(*this);
+
     auto op = node->operator_;
     switch (op) {
     case Token::Assign: {
@@ -216,11 +230,12 @@ void FuncGenerator::visit(BinaryOpExpr* node)
             /// 右值和左值之间的类型差异已经由checkAssignE2T在标记promotedTo中指出。
             /// 我们假定这种隐式转换由ValueGenerator妥善解决。
             if (lhsGen.inMemory()) {
-                emit({Tac::Storer, rhsGen.value(), lhsGen.addr(), Tac::Var::empty, width});
+                emit({Tac::Storer, rhsGen.value(), Tac::Var::empty, lhsGen.addr(), width});
             } else {
                 emit({Tac::Movrr, rhsGen.value(), Tac::Var::empty, lhsGen.addr()});
             }
         } else {
+            /// assignment between variables of compound type
             auto ty = Type::derefIfIsUserDefinedType(node->lhs_->evalType);
             assert(ty->tag() == Type::Compound);
             assert(node->lhs_->evalType->equalUnqual(node->rhs_->evalType));
@@ -245,8 +260,12 @@ void FuncGenerator::visit(BinaryOpExpr* node)
 
 void FuncGenerator::compoundAssignment(CompoundType* type, Tac::Reg lhsAddr, Tac::Reg rhsAddr)
 {
+    /**
+      * 还有许多需要做compound类型变量之间复制的操作，在现阶段的ir中无法反映，
+      * 所以我认为，目前没有必要将这一操作展开，而应该采用一个指令取代替
+      */
     auto wholeSize = type->width();
-    auto tempReg = nextReg();
+    /*auto tempReg = nextReg();
     std::size_t pos, offset;
     for (pos = 0, offset = 0;
          pos < wholeSize / PTRSIZE;
@@ -258,54 +277,71 @@ void FuncGenerator::compoundAssignment(CompoundType* type, Tac::Reg lhsAddr, Tac
     for ( ; offset < wholeSize; ++offset) {
         emit({Tac::Loadrcu, rhsAddr, offset, tempReg, 1});
         emit({Tac::Storerc, tempReg, lhsAddr, offset, 1});
-    }
+    }*/
+    emit({Tac::Memcpy, rhsAddr, wholeSize, lhsAddr});
 }
 
 /// trivial visit functions:
 void FuncGenerator::visit(FuncCallExpr* node)
 {
+    TempStackObjectDeallocGuard guard(*this);
+
     ValueGenerator vg(*this);
     vg.visit(node);
 }
 
 void FuncGenerator::visit(MemberExpr* node)
 {
+    TempStackObjectDeallocGuard guard(*this);
+
     ValueGenerator vg(*this);
     vg.visit(node);
 }
 
 void FuncGenerator::visit(ArrayRefExpr* node)
 {
+    TempStackObjectDeallocGuard guard(*this);
+
     ValueGenerator vg(*this);
     vg.visit(node);
 }
 
 void FuncGenerator::visit(VarExpr* node)
 {
+    TempStackObjectDeallocGuard guard(*this);
+
     ValueGenerator vg(*this);
     vg.visit(node);
 }
 
 void FuncGenerator::visit(CastExpr* node)
 {
+    TempStackObjectDeallocGuard guard(*this);
+
     ValueGenerator vg(*this);
     vg.visit(node);
 }
 
 void FuncGenerator::visit(LiteralExpr* node)
 {
+    TempStackObjectDeallocGuard guard(*this);
+
     ValueGenerator vg(*this);
     vg.visit(node);
 }
 
 void FuncGenerator::visit(SizeofExpr* node)
 {
+    TempStackObjectDeallocGuard guard(*this);
+
     ValueGenerator vg(*this);
     vg.visit(node);
 }
 
 void FuncGenerator::visit(ReturnStmt* node)
 {
+    TempStackObjectDeallocGuard guard(*this);
+
     if (Type::isScalar(node->func_->type_->retType())) {
         ValueGenerator vg(*this);
         node->retExpr_->accept(vg);
@@ -322,9 +358,7 @@ void FuncGenerator::visit(ReturnStmt* node)
         emit({Tac::GetParamVal, 1, Tac::Var::empty, ptr});
         compoundAssignment(compoundTy, ptr, retGen.addr());
     }
-
 }
-
 
 
 
@@ -877,17 +911,17 @@ void ValueGenerator::visit(ArrayRefExpr* node)
     }
 }
 
-// TODO a lot of business about parameters and temporary variables
 void ValueGenerator::visit(VarExpr* node)
 {
-    /// assume scalar type
+    /// assume scalar type or array
     bool inplace = false;
     auto varEnt = currScope().find(node->varName());
     auto& type = varEnt->type;
-    if (type->tag() == Type::Array) {
+    if (Type::isArray(type)) {
         // array should be in memory
         reg_ = nextReg();
-        emit({Tac::LoadVarPtr, varEnt, Tac::Var::empty, reg_});
+        emit({Tac::LoadVarPtr, std::get<Tac::StackObject>(varEnt->irBinding),
+                Tac::Var::empty, reg_});
         inplace = true;
     } else {
         assert(Type::isScalar(type));
@@ -899,12 +933,13 @@ void ValueGenerator::visit(VarExpr* node)
         } else {
             if (varEnt->ambiguous) {
                 reg_ = nextReg();
-                emit({Tac::LoadVarPtr, varEnt, Tac::Var::empty, reg_});
+                emit({Tac::LoadVarPtr, std::get<Tac::StackObject>(varEnt->irBinding),
+                        Tac::Var::empty, reg_});
                 emit({properLoadInst(node->evalType, Tac::Loadr),
                       reg_, Tac::Var::empty, reg_});
                 inplace = true;
             } else {
-                reg_ = varEnt->boundTo;
+                reg_ = std::get<Tac::Reg>(varEnt->irBinding);
             }
         }
     }
@@ -966,9 +1001,7 @@ void ValueGenerator::visit(LiteralExpr* node)
         assert(false && "other literal types are not implemented");
     } else if (literalType == Token::StringLiteral) {
         assert(node->evalType->equal(PointerType::strLiteralType()));
-        auto ent = funcGenerator_.strPool().findOrInsert(literalTok->stringLiteral());
-        reg_ = nextReg();
-        emit({Tac::LoadVarPtr, ent, Tac::Var::empty, reg_});
+        // TODO : StringLiteral
     } else {
         assert(false);
     }
@@ -995,30 +1028,35 @@ void ValueGenerator::visit(FuncCallExpr* node)
         auto compoundTy = static_cast<CompoundType*>(ty.get());
         auto width = compoundTy->width();
 
-        // TODO : How to allocate memory for return value?
         /// and let addr be the first parameter
-        args.push_back({reg_, Tac::PassBy::Value});
+        auto stackMem = nextStackObject(compoundTy->width(), compoundTy->alignAt());
+        pushTempStackObject(stackMem);
+        emit({Tac::Alloca, stackMem, Tac::Var::empty, reg_});
+        args.push_back(Tac::ArgInfo{reg_, Tac::ArgInfo::Value, PTRSIZE, PTRSIZE});
     }
 
     for (auto& arg: node->args_) {
-        if (Type::isScalar(ExprType(arg)) || Type::isArray(ExprType(arg))) {
+        auto type = ExprType(arg);
+        if (Type::isScalar(type)){
             ValueGenerator valGen(funcGenerator_);
             arg->accept(valGen);
-            args.push_back({valGen.value(), Tac::PassBy::Value});
+            args.push_back({valGen.value(), Tac::ArgInfo::Value, type->width(), Type::alignAt(type)});
+        } else if (Type::isArray(type)) {
+            ValueGenerator valGen(funcGenerator_);
+            arg->accept(valGen);
+            args.push_back({valGen.value(), Tac::ArgInfo::Value, PTRSIZE, PTRSIZE});
         } else {
             // is struct or union. pass struct or union by value.
             LValueGenerator ptrGen(funcGenerator_);
             arg->accept(ptrGen);
-            args.push_back({ptrGen.addr(), Tac::PassBy::ValuePtr});
+            args.push_back({ptrGen.addr(), Tac::ArgInfo::Ptr, type->width(), Type::alignAt(type)});
         }
     }
 
     if (scalarRet) {
         emit({Tac::Call, funcEnt, Tac::Var::empty, reg_});
-    } else if (Type::isVoid(node->evalType)) {
-        emit({Tac::Call, funcEnt});
     } else {
-        // return value is compound type
+        // return value is compound type or void.
         emit({Tac::Call, funcEnt});
     }
     lastQuad()->setPassingSpec(std::move(args));
@@ -1065,10 +1103,10 @@ void LValueGenerator::visit(VarExpr* node)
         if (ent->ambiguous || !Type::isScalar(ent->type)) {
             inMemory_ = true;
             addr_ = nextReg();
-            emit({Tac::LoadVarPtr, ent, Tac::Var::empty, addr_});
+            emit({Tac::LoadVarPtr, std::get<Tac::StackObject>(ent->irBinding), Tac::Var::empty, addr_});
         } else {
             inMemory_ = false;
-            addr_ = ent->boundTo;
+            addr_ = std::get<Tac::Reg>(ent->irBinding);
         }
     }
 }

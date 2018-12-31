@@ -1,6 +1,7 @@
 #include "tacdef.h"
 #include "SymbolTable.h"
 #include <cassert>
+#include <sstream>
 
 namespace Tac
 {
@@ -15,54 +16,68 @@ static const char* strfy[] = {
         "flushstkalloc", "getparamval", "getparamptr",
 };
 
-Var::Var(Reg r) : tag(TReg), uvar(r)
+Var::Var(Reg r) : uvar(r)
 {
 }
 
-Var::Var(int64_t imm) : tag(TImmi), uvar(imm)
+Var::Var(const StackObject& o) : uvar(o)
 {
 }
 
-Var::Var(SymtabEntry* s) : tag(TVar), uvar(s)
+Var::Var(Var::ImmType imm) : uvar(imm)
 {
 }
 
-Var::Var(Label l) : tag(TLbl), uvar(l)
+Var::Var(Label l) : uvar(l)
 {
 }
 
-Var::Var(StringPoolEntry* e) : tag(TPool), uvar(e) {}
+Var::Var(SymtabEntry* s) :  uvar(s)
+{
+}
+
+Var::Var(const std::string& s) : uvar(s)
+{
+
+}
+
 
 const Var Var::empty{};
 
 std::string Var::toString() const
 {
-    switch (tag) {
-    case TReg:
-        return std::get<Reg>(uvar).toString();
-    case TImmi:
-        return std::to_string(std::get<int64_t>(uvar));
-    case TVar:
-        return *std::get<SymtabEntry*>(uvar)->pname;
-    case TLbl:
-        return std::get<Label>(uvar).toString();
-    case TPool:
-        return std::string(".STRCONST \"") + *std::get<StringPoolEntry*>(uvar)->sptr + "\"";
-    case TNone:
-        return " ";
-    default:
-        assert(false);
-    }
+    struct ToStringVisitor
+    {
+        std::string operator()(Reg r) { return r.toString(); }
+        std::string operator()(ImmType i) { return std::to_string(i); }
+        std::string operator()(const StackObject& s) {
+            std::ostringstream os;
+            os << "Stack(" << s.n << "," << s.size << "," << s.alignAt << ")";
+            return os.str();
+        }
+        std::string operator()(SymtabEntry* s) {
+            return "function("s + s->pname + ")";
+        }
+        std::string operator()(const std::string& s) {
+            return "globl("s + s + ")";
+        }
+        std::string operator()(Label l) {
+            return l.toString();
+        }
+        std::string operator()(std::monostate m) {
+            return "Tac::Var(invalid)";
+        }
+    };
+
+    ToStringVisitor visitor;
+    return std::visit(visitor, uvar);
 }
 
 bool Var::operator==(const Var& rhs) const
 {
-    if (tag == rhs.tag) {
-        return uvar == rhs.uvar;
-    } else {
-        return false;
-    }
+    return uvar == rhs.uvar;
 }
+
 
 std::string Label::toString() const
 {
@@ -79,19 +94,6 @@ std::string Reg::toString() const
 {
     std::string ret{"%r"};
     ret += std::to_string(n);
-/*    switch (n) {
-    case PArg:
-        ret += "arg";
-        break;
-    case PFrame:
-        ret += "f";
-        break;
-    case PStack:
-        ret += "s";
-        break;
-    default:
-        assert(false);
-    }*/
     return ret;
 }
 
@@ -139,22 +141,6 @@ std::string Function::toString() const
     return ret;
 }
 
-std::size_t Function::stkAlloc(std::shared_ptr<Type> ty)
-{
-    auto ret = tempPool_.size;
-    tempPool_.pool.emplace_back(std::move(ty));
-    tempPool_.size++;
-    return ret;
-}
-
-void Function::stkDisalloc(std::size_t last)
-{
-    for (auto i = tempPool_.liveBegin; i <= last; ++i) {
-        tempPool_.pool[i].expired = true;
-    }
-    tempPool_.liveBegin = last + 1;
-}
-
 std::string LinearTacIR::toString() const
 {
     std::string ret;
@@ -164,18 +150,21 @@ std::string LinearTacIR::toString() const
     return ret;
 }
 
-
-StringPoolEntry* StringPool::findOrInsert(const std::string& str)
+StaticObject::StaticObject(int i, const std::string& ascii)
+    : id(i), data(ascii), size(ascii.size()), align(1), init(true)
 {
-    auto iter = pool_.find(str);
-    if (iter == pool_.end()) {
-        auto [pos, inserted] = pool_.insert({std::move(str), StringPoolEntry()});
-        assert(inserted);
-        pos->second.sptr = &pos->first;
-        return &pos->second;
-    } else {
-        return &iter->second;
-    }
 }
+
+StaticObject::StaticObject(const StaticObject::Id& i, size_t s, size_t a,
+                           std::vector<StaticObject::BinData>&& d)
+                           : id(i), size(s), align(a), data(d), init(true)
+{
+}
+
+StaticObject::StaticObject(const StaticObject::Id& i, size_t s, size_t a)
+    : id(id), size(s), align(a), init(false)
+{
+}
+
 
 } // end namespace tac

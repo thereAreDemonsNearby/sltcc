@@ -8,9 +8,20 @@
 #include <iostream>
 #include <unordered_map>
 #include "tacdef.h"
+#include <variant>
 
 class Type;
 class Token;
+
+struct ParameterInfo
+{
+    int seq;
+};
+
+struct DataMemberInfo
+{
+    size_t offset;
+};
 
 struct SymtabEntry
 {
@@ -18,16 +29,17 @@ struct SymtabEntry
     std::shared_ptr<Type> type;
     int level; /// level 0 means global scope
 
-    bool ambiguous = false;
-    size_t offset;
-    Tac::Reg boundTo;
+    bool ambiguous = false; /// is '&'ed somewhere
+    std::variant<Tac::Reg, Tac::StackObject> irBinding;
 
-    bool isParam = false;
-    int seq;
+    size_t offset; /// memory offset for a member of a compound type
 
-    Token const* position;
+    bool isParam = false; /// whether this is a function parameter
+    int seq; /// parameter sequence number
+
+    Token const* textPosition;
     SymtabEntry(std::shared_ptr<Type> ty, Token const* p, int lv)
-            : type(std::move(ty)), position(p), level(lv) {}
+            : type(std::move(ty)), textPosition(p), level(lv) {}
 };
 
 class SymbolTable

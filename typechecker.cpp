@@ -771,8 +771,7 @@ void TypeChecker::checkVarDef(const std::shared_ptr<Type>& ty, Token const* pos)
     if (Type::isVoid(ty)) {
         throw Error(pos, "cannot declare a variable of type void");
     } else if (ty->tag() == Type::UserDefined) {
-        auto cast = static_cast<UserDefinedTypeRef*>(ty.get());
-        auto realType = cast->scope().findInCurr(cast->typeName())->type;
+        auto realType = Type::derefIfIsUserDefinedType(ty);
         if (realType->tag() == Type::Tag::Incomplete) {
             throw Error(pos, "cannot declare a variable of incomplete type");
         }
