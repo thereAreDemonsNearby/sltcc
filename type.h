@@ -126,6 +126,7 @@ public:
 
     static std::shared_ptr<BuiltInType> maxUIntType();
     static std::shared_ptr<BuiltInType> intType();
+    static std::shared_ptr<BuiltInType> uintType();
     static std::shared_ptr<BuiltInType> charType();
     static std::shared_ptr<BuiltInType> doubleType();
     static std::shared_ptr<BuiltInType> voidType();

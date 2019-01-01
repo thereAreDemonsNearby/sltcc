@@ -278,6 +278,7 @@ Token TokenStream::lexNumber(StrIter& it, StrIter end)
     Token tok;
     bool afterDot = false;
     std::string lexeme;
+    size_t base = 10;
     // integer part
     if (isDigit1to9(*it)) {
         lexeme.push_back(*it++);
@@ -306,12 +307,13 @@ Token TokenStream::lexNumber(StrIter& it, StrIter end)
     } else if (*it == '0') {
         lexeme.push_back(*it++);
         if (it != end) {
-            if (*it == std::tolower('x')) {
+            if (std::tolower(*it) == 'x') {
                 // HEX
                 lexeme.push_back(*it++);
                 if (!lexHex(it, end, lexeme)) {
 					return Token::invalidToken;
                 }
+                base = 16;
 
             } else if (isDigitInRange(*it, '1', '7')) {
                 // OCT
@@ -319,6 +321,7 @@ Token TokenStream::lexNumber(StrIter& it, StrIter end)
                 if (!lexOct(it, end, lexeme)) {
 					return Token::invalidToken;
                 }
+                base = 8;
 
             } else {
                 if (*it == '.') {
@@ -340,7 +343,7 @@ Token TokenStream::lexNumber(StrIter& it, StrIter end)
         }
     }
 
-	auto cat = lexNumberSuffix( it, end, lexeme, afterDot );
+	auto cat = lexNumberSuffix(it, end, lexeme, afterDot);
 
 	if (it != end && std::isalnum(*it)) {
 		// TODO: root not singular
@@ -352,11 +355,15 @@ Token TokenStream::lexNumber(StrIter& it, StrIter end)
 
     switch (cat) {
     // TODO: lazy and annoying
-    case NumCat::I:
     case NumCat::U:
+        tok.setLiteral(static_cast<unsigned>(std::stoul(lexeme, nullptr, base)));
+        break;
+    case NumCat::I:
+    case NumCat::L:
     case NumCat::UL:
+    case NumCat::LL:
     case NumCat::ULL:
-        tok.setLiteral(std::stoi(lexeme));
+        tok.setLiteral(std::stoi(lexeme, nullptr, base));
         break;
     case NumCat::F:
     case NumCat::DB:

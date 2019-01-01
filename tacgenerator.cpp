@@ -6,7 +6,7 @@ namespace
 /// 传入一个有符号版本，然后撅定用有符号还是无符号版本
 Tac::Opcode properLoadInst(const std::shared_ptr<Type>& ty, Tac::Opcode op)
 {
-    auto filter = [](Tac::Opcode top) -> Tac::Opcode {
+    auto toUnsignedVersion = [](Tac::Opcode top) -> Tac::Opcode {
         switch (top) {
         case Tac::Loadi: return Tac::Loadiu;
         case Tac::Loadr: return Tac::Loadru;
@@ -18,12 +18,12 @@ Tac::Opcode properLoadInst(const std::shared_ptr<Type>& ty, Tac::Opcode op)
     if (Type::isInteger(ty)) {
         auto intTy = static_cast<BuiltInType*>(ty.get());
         if (intTy->isUnsigned()) {
-            return filter(op);
+            return toUnsignedVersion(op);
         } else {
             return op;
         }
     } else {
-        return filter(op);
+        return toUnsignedVersion(op);
     }
 }
 
@@ -62,7 +62,51 @@ void TacGenerator::visit(FuncDef* node)
 
 void TacGenerator::visit(VarDef* node)
 {
-    // TODO : collect global variables
+    /// this function collects variables in the outest scope(global).
+    auto size = node->type_->width();
+    auto align = Type::alignAt(node->type_);
+    if (node->init_) {
+        if (Type::isArithmetic(node->type_)) {
+            /// so far only literal init expression is permitted
+            /// 这么写的话，要求全局变量定义中一定没有发生类型转换。
+            if (node->init_->tag() == ExprTag::Literal) {
+                auto literalExpr = static_cast<LiteralExpr*>(node->init_.get());
+                auto literalTok = literalExpr->tok();
+                std::vector<Tac::StaticObject::BinData> data;
+                switch (literalTok->type()) {
+                case Token::IntLiteral:
+                    data.emplace_back(literalTok->intLiteral());
+                    break;
+                case Token::UnsignedLiteral:
+                    data.emplace_back(literalTok->uintLiteral());
+                    break;
+                case Token::DoubleLiteral: {
+                    double v = literalTok->doubleLiteral();
+                    data.emplace_back(*reinterpret_cast<int64_t*>(&v));
+                    break;
+                }
+                case Token::CharLiteral:
+                    data.emplace_back((int8_t)literalTok->charLiteral());
+                    break;
+                default:
+                    assert(false);
+                }
+
+                Tac::StaticObject so(node->type_->width(),
+                        Type::alignAt(node->type_), std::move(data));
+                addGlobalVar(node->name_, so);
+            } else {
+                assert(false && "not implemented");
+            }
+        } else {
+            // TODO not implemented
+            assert(false);
+        }
+    } else {
+        /// no init
+        addGlobalVar(node->name_, Tac::StaticObject(node->type_->width(),
+                Type::alignAt(node->type_)));
+    }
 }
 
 void FuncGenerator::visit(IfStmt* node)
@@ -914,33 +958,46 @@ void ValueGenerator::visit(ArrayRefExpr* node)
 void ValueGenerator::visit(VarExpr* node)
 {
     /// assume scalar type or array
-    bool inplace = false;
+    bool inplace = true;
     auto varEnt = currScope().find(node->varName());
     auto& type = varEnt->type;
     if (Type::isArray(type)) {
         // array should be in memory
         reg_ = nextReg();
-        emit({Tac::LoadVarPtr, std::get<Tac::StackObject>(varEnt->irBinding),
-                Tac::Var::empty, reg_});
-        inplace = true;
+        if (varEnt->level == 0) {
+            /// global variable
+            emit({Tac::LoadGlobalPtr, node->varName(), Tac::Var::empty, reg_});
+        } else {
+            /// auto variable
+            emit({Tac::LoadVarPtr, std::get<Tac::StackObject>(varEnt->irBinding),
+                  Tac::Var::empty, reg_});
+        }
     } else {
         assert(Type::isScalar(type));
         if (varEnt->isParam) {
             reg_ = nextReg();
             int seq = paramSeq(varEnt, funcGenerator_.func().retType);
             emit({Tac::GetParamVal, seq, Tac::Var::empty, reg_});
-            inplace = true;
         } else {
-            if (varEnt->ambiguous) {
+            if (varEnt->level == 0) {
+                /// global variable
                 reg_ = nextReg();
-                emit({Tac::LoadVarPtr, std::get<Tac::StackObject>(varEnt->irBinding),
-                        Tac::Var::empty, reg_});
-                emit({properLoadInst(node->evalType, Tac::Loadr),
-                      reg_, Tac::Var::empty, reg_});
-                inplace = true;
+                emit({Tac::LoadGlobalPtr, node->varName(), Tac::Var::empty, reg_});
+                emit({properLoadInst(varEnt->type, Tac::Loadr), reg_,
+                      Tac::Var::empty, reg_});
             } else {
-                reg_ = std::get<Tac::Reg>(varEnt->irBinding);
+                if (varEnt->ambiguous) {
+                    reg_ = nextReg();
+                    emit({Tac::LoadVarPtr, std::get<Tac::StackObject>(varEnt->irBinding),
+                          Tac::Var::empty, reg_});
+                    emit({properLoadInst(node->evalType, Tac::Loadr),
+                          reg_, Tac::Var::empty, reg_});
+                } else {
+                    reg_ = std::get<Tac::Reg>(varEnt->irBinding);
+                    inplace = false;
+                }
             }
+
         }
     }
 
@@ -979,29 +1036,34 @@ void ValueGenerator::visit(SizeofExpr* node)
 
 void ValueGenerator::visit(LiteralExpr* node)
 {
-    // TODO think about int types
     auto literalTok = node->tok_;
     auto literalType = literalTok->type();
-    int64_t immi;
+    int64_t imm;
     if (Type::isInteger(node->evalType)) {
         switch (literalType) {
         case Token::IntLiteral:
-            immi = literalTok->intLiteral();
+            imm = literalTok->intLiteral();
+            break;
+        case Token::UnsignedLiteral:
+            imm = literalTok->uintLiteral();
             break;
         case Token::CharLiteral:
-            immi = literalTok->charLiteral();
+            imm = literalTok->charLiteral();
             break;
         default:
             assert(false && "other literal types are not implemented");
         }
         reg_ = nextReg();
-        emit({Tac::Loadi, immi, Tac::Var::empty, reg_});
+        emit({Tac::Loadi, imm, Tac::Var::empty, reg_});
 
     } else if (Type::isFloating(node->evalType)) {
-        assert(false && "other literal types are not implemented");
+        assert(false && "floating literal types are not implemented");
     } else if (literalType == Token::StringLiteral) {
         assert(node->evalType->equal(PointerType::strLiteralType()));
-        // TODO : StringLiteral
+        /// value of char* is the address it point to
+        int n = addLiteral(Tac::StaticObject(literalTok->stringLiteral()));
+        reg_ = nextReg();
+        emit({Tac::LoadConstantPtr, n, Tac::Var::empty, reg_});
     } else {
         assert(false);
     }
@@ -1095,18 +1157,30 @@ void LValueGenerator::visit(VarExpr* node)
 {
     auto ent = currScope().find(node->varName());
     if (ent->isParam) {
-       inMemory_ = true;
-       addr_ = nextReg();
-       int seq = paramSeq(ent, funcGenerator_.func().retType);
-       emit({Tac::GetParamPtr, seq, Tac::Var::empty, addr_});
+        /// 如果标量，而且没有被取地址，但是还是调用了LValueGenerator，
+        /// 真相只有一个，那就是该变量作为赋值的左边
+        /// 怕麻烦，暂时用这种愚蠢的方法解决：即强制使其进入内存
+        ent->ambiguous = true;
+        int seq = paramSeq(ent, funcGenerator_.func().retType);
+        inMemory_ = true;
+        addr_ = nextReg();
+        emit({Tac::GetParamPtr, seq, Tac::Var::empty, addr_});
+
     } else {
-        if (ent->ambiguous || !Type::isScalar(ent->type)) {
+        if (ent->level == 0) {
+            /// global variable
             inMemory_ = true;
             addr_ = nextReg();
-            emit({Tac::LoadVarPtr, std::get<Tac::StackObject>(ent->irBinding), Tac::Var::empty, addr_});
+            emit({Tac::LoadGlobalPtr, node->varName(), Tac::Var::empty, addr_});
         } else {
-            inMemory_ = false;
-            addr_ = std::get<Tac::Reg>(ent->irBinding);
+            if (ent->ambiguous || !Type::isScalar(ent->type)) {
+                inMemory_ = true;
+                addr_ = nextReg();
+                emit({Tac::LoadVarPtr, std::get<Tac::StackObject>(ent->irBinding), Tac::Var::empty, addr_});
+            } else {
+                inMemory_ = false;
+                addr_ = std::get<Tac::Reg>(ent->irBinding);
+            }
         }
     }
 }

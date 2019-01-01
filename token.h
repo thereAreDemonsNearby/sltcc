@@ -72,6 +72,7 @@ public:
     void setInvalid();
     void setLiteral(const std::string &);
     void setLiteral(int);
+    void setLiteral(unsigned int);
     void setLiteral(double);
     void setLiteral(char);
     void setKeyword(KeywordType);
@@ -94,6 +95,7 @@ public:
     std::string name() const;
     OperatorType getOperator() const;
     int intLiteral() const;
+    unsigned uintLiteral() const;
     double doubleLiteral() const;
     std::string stringLiteral() const;
     char charLiteral() const;
@@ -118,6 +120,7 @@ private:
         std::string str_;
         double dval_;
         int ival_;
+        unsigned uival_;
         char cval_;
         OperatorType optor_;
         KeywordType kwd_;

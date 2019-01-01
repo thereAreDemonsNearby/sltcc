@@ -421,6 +421,9 @@ void TypeChecker::visit(LiteralExpr* node)
     case Token::IntLiteral:
         node->evalType = BuiltInType::intType();
         break;
+    case Token::UnsignedLiteral:
+        node->evalType = BuiltInType::uintType();
+        break;
     case Token::CharLiteral:
         node->evalType = BuiltInType::charType();
         break;

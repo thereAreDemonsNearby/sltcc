@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 #include <map>
-#include <set>
+#include <unordered_set>
 #include <cinttypes>
 #include "platform.h"
 
@@ -43,7 +43,7 @@ enum Opcode
 
     /** 用于从函数体内获得参数的值或地址 */
     /** num 算上返回值变成的参数 */
-    GetParamVal, GetParamPtr, /// GetParam* num empty reg
+            GetParamVal, GetParamPtr, /// GetParam* num empty reg
 
     Alloca, /// Alloca <StackObject> <empty> <reg(save the address)> allocate memory on stack
     Dealloca, /// Dealloca <StackObject>
@@ -55,20 +55,27 @@ enum Opcode
 struct Reg
 {
     int n; /// exclusive for a particular function
-    explicit Reg(int r = -1) : n(r) {}
+    explicit Reg(int r = -1) : n(r)
+    {}
+
     std::string toString() const;
+
     bool operator==(Reg rhs) const;
 };
 
 struct Label
 {
     int n; /// exclusive for a particular file
-    explicit Label(int i = -1) : n(i) {}
+    explicit Label(int i = -1) : n(i)
+    {}
+
     std::string toString() const;
+
     bool operator==(Label rhs) const;
 
     /// label must be unique in file scope.
-    static Label next() {
+    static Label next()
+    {
         static int no = 1;
         return Label(no++);
     }
@@ -82,7 +89,8 @@ struct StackObject
     uint64_t size;
 
     StackObject(int i, uint64_t s, size_t align)
-        : n(i), alignAt(align), size(s) {}
+            : n(i), alignAt(align), size(s)
+    {}
 };
 
 /// In asm, some constants are too big to fit in a instruction
@@ -96,42 +104,88 @@ struct StaticObject
     struct Padding
     {
         size_t size;
-        bool operator<(Padding rhs) { return size < rhs.size; }
-        bool operator==(Padding rhs) { return size == rhs.size; }
+
+        bool operator==(Padding rhs)
+        { return size == rhs.size; }
     };
 
     /// global variables use variable name as their id,
     /// while readonly data like string literal and double literal
     /// use a unique sequence number as their id
-    using Id = std::variant<std::string, int>;
-    Id id;
+
 
     using BinData = std::variant<int8_t, int16_t,
             int32_t, int64_t, Padding>; /// bin data like .word .half ...
 
-    std::variant<std::string, /// character data, null terminated ascii
-                 std::vector<BinData> // bin data
-                 > data;
+    std::variant<std::monostate,
+                 std::string, /// character data, null terminated ascii
+                 std::vector<BinData>// bin data
+                > data;
 
     size_t size;
     size_t align;
-    bool init;
 
-    StaticObject(int id, const std::string& ascii);
-    StaticObject(const Id& id, size_t size, size_t align,
+    explicit StaticObject(const std::string& ascii);
+
+    StaticObject(size_t size, size_t align,
                  std::vector<BinData>&& data);
-    StaticObject(const Id& id, size_t size, size_t align);
+
+    StaticObject(size_t size, size_t align);
+
+    bool operator==(const StaticObject& rhs) const
+    { return data == rhs.data; }
+
+    bool initialized() const {
+        return data.index() == 0;
+    }
 };
+}
+
+namespace std
+{
+    template<>
+    struct hash<Tac::StaticObject::Padding>
+    {
+        using argument_type = Tac::StaticObject::Padding;
+        using result_type = size_t;
+        result_type operator()(argument_type p) {
+            return std::hash<size_t>()(p.size);
+        }
+    };
+
+    template<>
+    struct hash<Tac::StaticObject>
+    {
+        using argument_type = Tac::StaticObject;
+        using result_type = size_t;
+        result_type operator()(argument_type const& so) {
+            if (so.data.index() == 0) {
+                return std::hash<std::string>()(std::get<0>(so.data));
+            } else {
+                const auto& v = std::get<1>(so.data);
+                result_type res = 0;
+                for (const auto& d : v) {
+                    res ^= std::hash<argument_type::BinData>{}(d) + 0x9e3779b9;
+                }
+                return res;
+            }
+        }
+    };
+
+}
+
+namespace Tac {
 
 struct Var
 {
     /// int64 : big enough
     using ImmType = int64_t;
 
-    std::variant<Reg, ImmType, StackObject, Label,
+    std::variant<std::monostate,
+                 Reg, ImmType, StackObject, Label,
                  SymtabEntry* /* for functions only */,
-                 std::string, /* for global variables only */
-                 std::monostate> uvar;
+                 std::string /* for global variables only */
+                 > uvar;
 
     Var() {}
     Var(Reg r);
@@ -207,10 +261,14 @@ struct Function
 
 struct LinearTacIR
 {
-    std::vector<StaticObject> globalVars;
-    std::set<StaticObject> literalPool;
+    std::vector<std::pair<std::string, StaticObject>> globalVars;
+    std::vector<StaticObject> literalPool;
     std::vector<Function> funcs;
     std::string toString() const;
+
+    void addGlobalVar(const std::string& name, const StaticObject& so);
+    int addLiteral(const StaticObject& so);
+
 };
 
 } // end namespace tac

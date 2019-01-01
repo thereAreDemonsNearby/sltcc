@@ -292,6 +292,12 @@ std::shared_ptr<BuiltInType> BuiltInType::charType()
     return v;
 }
 
+std::shared_ptr<BuiltInType> BuiltInType::uintType()
+{
+    static auto v = std::make_shared<BuiltInType>(BuiltInType::Integer, true, INTSIZE, 0);
+    return v;
+}
+
 PointerType::PointerType(const std::shared_ptr<Type>& ty, QualifierHolder qh)
     : Type(Pointer, qh), base_(ty)
 {

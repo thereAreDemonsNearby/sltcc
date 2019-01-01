@@ -150,21 +150,35 @@ std::string LinearTacIR::toString() const
     return ret;
 }
 
-StaticObject::StaticObject(int i, const std::string& ascii)
-    : id(i), data(ascii), size(ascii.size()), align(1), init(true)
+int LinearTacIR::addLiteral(const StaticObject& so)
+{
+    for (size_t i = 0; i < literalPool.size(); ++i) {
+        if (literalPool[i] == so) {
+            return i;
+        }
+    }
+    literalPool.push_back(so);
+    return literalPool.size() - 1;
+}
+
+void LinearTacIR::addGlobalVar(const std::string& name, const StaticObject& so)
+{
+    globalVars.emplace_back(name, so);
+}
+
+StaticObject::StaticObject(const std::string& ascii)
+    : data(ascii), size(ascii.size()+1), align(sizeof(ascii[0]))
 {
 }
 
-StaticObject::StaticObject(const StaticObject::Id& i, size_t s, size_t a,
-                           std::vector<StaticObject::BinData>&& d)
-                           : id(i), size(s), align(a), data(d), init(true)
+StaticObject::StaticObject(size_t s, size_t a, std::vector<StaticObject::BinData>&& d)
+    : data(d), size(s), align(a)
 {
 }
 
-StaticObject::StaticObject(const StaticObject::Id& i, size_t s, size_t a)
-    : id(id), size(s), align(a), init(false)
+StaticObject::StaticObject(size_t size, size_t align)
+    : size(s), align(a)
 {
 }
-
 
 } // end namespace tac

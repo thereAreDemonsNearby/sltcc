@@ -26,6 +26,12 @@ public:
     void pushScope(SymbolTable* s) { scopeStack_.push(s); }
     void popScope() { scopeStack_.pop(); }
 
+    int addLiteral(Tac::StaticObject const& so) { return ir_.addLiteral(so); }
+    void addGlobalVar(std::string const& name, Tac::StaticObject const& so)
+    {
+        ir_.addGlobalVar(name, so);
+    }
+
 private:
     std::stack<SymbolTable*> scopeStack_;
     Tac::LinearTacIR ir_;
@@ -99,9 +105,15 @@ public:
     SymbolTable& currScope() { return tacGen_.currScope(); }
     void pushScope(SymbolTable* s) { tacGen_.pushScope(s); }
     void popScope() { tacGen_.popScope(); }
+
     std::list<Tac::Quad>::iterator emit(const Tac::Quad& quad);
     std::list<Tac::Quad>::iterator lastQuad();
     void pushTempStackObject(const Tac::StackObject& s) { tempStackObjects_.push(s); }
+    int addLiteral(Tac::StaticObject const& o) { tacGen_.addLiteral(o); }
+    void addGlobalVar(std::string const& s, Tac::StaticObject const& o)
+    {
+        tacGen_.addGlobalVar(s, o);
+    }
 
     TacGenerator& tacGenerator() { return tacGen_; }
 private:
@@ -130,6 +142,11 @@ protected:
     std::list<Tac::Quad>::iterator emit(const Tac::Quad& quad) { return funcGenerator_.emit(quad); }
     std::list<Tac::Quad>::iterator lastQuad() { return funcGenerator_.lastQuad(); }
     void pushTempStackObject(const Tac::StackObject& s) { funcGenerator_.pushTempStackObject(s); }
+    int addLiteral(Tac::StaticObject const& o) { return funcGenerator_.addLiteral(o); }
+    void addGlobalVar(std::string const& n, Tac::StaticObject const& o)
+    {
+        funcGenerator_.addGlobalVar(n, o);
+    }
 };
 
 class BranchGenerator : public Visitor, public FuncUtil

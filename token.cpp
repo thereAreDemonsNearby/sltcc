@@ -133,6 +133,13 @@ void Token::setLiteral(int val)
     ival_ = val;
 }
 
+void Token::setLiteral(unsigned int val)
+{
+    checkAndDestroy();
+    type_ = TokenType::UnsignedLiteral;
+    uival_ = val;
+}
+
 void Token::setLiteral(double val)
 {
     checkAndDestroy();
@@ -234,6 +241,12 @@ int Token::intLiteral() const
     return ival_;
 }
 
+unsigned Token::uintLiteral() const
+{
+    assert(type_ == TokenType::UnsignedLiteral);
+    return uival_;
+}
+
 double Token::doubleLiteral() const
 {
     assert(type_ == TokenType::DoubleLiteral);
@@ -268,6 +281,9 @@ std::string Token::toString() const
         break;
     case tt::IntLiteral:
         os << "IntLiteral(" << ival_ << ")";
+        break;
+    case tt::UnsignedLiteral:
+        os << "UnsignedLiteral(" << uival_ << ")";
         break;
     case tt::DoubleLiteral:
         os << "DoubleLiteral(" << dval_ << ")";
@@ -328,3 +344,4 @@ void Token::setVarArgs()
     checkAndDestroy();
     type_ = TokenType::VarArgs;
 }
+
