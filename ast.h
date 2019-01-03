@@ -399,7 +399,7 @@ public:
 
 private:
     std::shared_ptr<Expr> operand_;
-    Token::OperatorType operator_; // TODO : maybe duplicate
+    Token::OperatorType operator_;
 };
 
 class BinaryOpExpr final : public Expr

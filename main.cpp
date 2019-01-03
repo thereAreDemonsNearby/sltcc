@@ -145,7 +145,7 @@ void testSimpleExpr()
     printSimpleExpr("(int)4.555 <= (int) 4 + (int) 3.3");
 }
 
-void printSimpleProgram(std::string str)
+void printAst(std::string str)
 {
     using namespace std;
     ErrorLog errli;
@@ -165,57 +165,57 @@ void printSimpleProgram(std::string str)
 
 void testSimpleProgram()
 {
-    printSimpleProgram("int i = 2; int b = 43;");
-    printSimpleProgram("int main() { int i = 2; i = 2 + (int)3;}");
-    printSimpleProgram("int sum(int arr[], int sz); int main() { int i = 2; i = 2 + (int)3;}");
-    printSimpleProgram("struct foo; struct bar { int a; char* str; };");
-    printSimpleProgram(std::string("struct node { int val_; node* next; };"));
-    printSimpleProgram(std::string("struct node { int val_; node* next; };")
-                       + "int main() {"
-                       + "node p; node q;"
-                       + "p.next = &q;"
-                       + "}");
-    printSimpleProgram(std::string("int func(int arr[], int sz) {")
-                       + "arr[sz] = 2 + 3; }");
-    printSimpleProgram("int foo(int); int main() {} int foo(int a) {}");
-    printSimpleProgram("int foo(); int main() {} int foo(int a) {}");
-    printSimpleProgram("struct node { double* b; };"
-                               "int main() {"
-                               "node* a; double b;"
-                               "a->b = &b;"
-                               "}");
-    printSimpleProgram("int arrsum(int arr[], int size) {"
-                               "return 100; ; }");
-    printSimpleProgram("int main() {"
-                               "if (1 < 2) if (3>4) 1+1; else 1+1;}");
-    printSimpleProgram("int main() {"
-                               "while (1) { int arr[100]; arr[1] += 1; }"
-                               "}");
-    printSimpleProgram("int main() {"
-                               "int a;"
-                               "for (a = 1; a <= 100; a += 1)"
-                               "if (a % 2 == 0) "
-                               "a = a / 3 % 4;"
-                               "}");
-    printSimpleProgram("int main() {"
-                               "int i;"
-                               "do {"
-                               "i += 1;"
-                               "} while(a != 0);"
-                               "}");
-    printSimpleProgram("void foo(); int main() {"
-                               "foo = foo + 1;"
-                               "int foo; }");
-    printSimpleProgram("void main() { void a; int b; double c; c = (double)b; }");
-    printSimpleProgram("struct a { int v;}; struct b { a v;}; int main() { b v; int i = v.v.v; }");
-    printSimpleProgram("int a; double b; int main(){}");
-    printSimpleProgram("struct A { int a; int b[20][18]; }; "
-                               "int main() {"
-                               "A x;  x.b[1][4] = 3; }");
-    printSimpleProgram("struct A { int x; }; "
-                               "int main() { "
-                               "A* p; int b = (*p).x;"
-                               "}");
+    printAst("int i = 2; int b = 43;");
+    printAst("int main() { int i = 2; i = 2 + (int)3;}");
+    printAst("int sum(int arr[], int sz); int main() { int i = 2; i = 2 + (int)3;}");
+    printAst("struct foo; struct bar { int a; char* str; };");
+    printAst(std::string("struct node { int val_; node* next; };"));
+    printAst(std::string("struct node { int val_; node* next; };")
+             + "int main() {"
+             + "node p; node q;"
+             + "p.next = &q;"
+             + "}");
+    printAst(std::string("int func(int arr[], int sz) {")
+             + "arr[sz] = 2 + 3; }");
+    printAst("int foo(int); int main() {} int foo(int a) {}");
+    printAst("int foo(); int main() {} int foo(int a) {}");
+    printAst("struct node { double* b; };"
+             "int main() {"
+             "node* a; double b;"
+             "a->b = &b;"
+             "}");
+    printAst("int arrsum(int arr[], int size) {"
+             "return 100; ; }");
+    printAst("int main() {"
+             "if (1 < 2) if (3>4) 1+1; else 1+1;}");
+    printAst("int main() {"
+             "while (1) { int arr[100]; arr[1] += 1; }"
+             "}");
+    printAst("int main() {"
+             "int a;"
+             "for (a = 1; a <= 100; a += 1)"
+             "if (a % 2 == 0) "
+             "a = a / 3 % 4;"
+             "}");
+    printAst("int main() {"
+             "int i;"
+             "do {"
+             "i += 1;"
+             "} while(a != 0);"
+             "}");
+    printAst("void foo(); int main() {"
+             "foo = foo + 1;"
+             "int foo; }");
+    printAst("void main() { void a; int b; double c; c = (double)b; }");
+    printAst("struct a { int v;}; struct b { a v;}; int main() { b v; int i = v.v.v; }");
+    printAst("int a; double b; int main(){}");
+    printAst("struct A { int a; int b[20][18]; }; "
+             "int main() {"
+             "A x;  x.b[1][4] = 3; }");
+    printAst("struct A { int x; }; "
+             "int main() { "
+             "A* p; int b = (*p).x;"
+             "}");
 }
 
 void printSema(std::string str, bool correct)
@@ -442,28 +442,148 @@ void printTacGen_(std::string str, int lineno)
     TacGenerator tacGen;
     std::cout << "Line " << lineno << ":\n";
     auto root = parser.goal();
-    if (errs.count() != 0) goto ErrOut;
+    if (errs.count() != 0) {
+        std::cout << "syntax error:\n";
+        for (auto const& err: errs) {
+            std::cout << err.what() << "\n";
+        }
+        return;
+    }
     root->accept(sema);
-    if (errs.count() != 0) goto ErrOut;
+    if (errs.count() != 0) {
+        std::cout << "semantic error:\n";
+        for (auto const& err: errs) {
+            std::cout << err.what() << "\n";
+        }
+        return;
+    }
     root->accept(tacGen);
     std::cout << tacGen.ir().toString() << '\n';
 
     return;
-
-    ErrOut:
-    std::cout << "errors found. cannot generate tac code." << std::endl;
 }
 #define printTacGen(str) printTacGen_((str), __LINE__)
 
 void testTacGen()
 {
-    printTacGen("int sum() { int a; a = 1; int b = 2; int c = a + b; return c; }");
+    /*printTacGen("int sum() { int a; a = 1; int b = 2; int c = a + b; return c; }");
+    printTacGen("void nothing() { unsigned char a; short b; b = a; }");
+    printTacGen("int sum(int a, int b) { return a + b + 55; }");
+    printTacGen("int sum(int a, int b) { return a + b + 2147483647; }");
+    printTacGen("int sum(char a, unsigned b) { return a + b; }");
+    printTacGen("int sum(char a, unsigned short b) { return a + b; }");
+    printTacGen("int sum(unsigned char a, short b) { return a + b; }");
+    printTacGen("int diff(unsigned a, unsigned b) { return a - b; }");
+    printTacGen("int diff(short a) { return a - 0xffffffffu; }");
+    printTacGen("int mult(short a, int b) { return a * (unsigned short)b; }");
+    printTacGen("int* advancePtr(int* p, int n) { return p + n; }");
+    printTacGen("int* advancePtr(int (*parr)[10], int n) { return (int*)(parr + n); }");
+    printTacGen("struct S { char a; int b; }; S* prevPtr(S* p, int n) { return p - n; }");
+
+    printTacGen("int max(int a, int b) {"
+                "  if (a > b) { return a; }"
+                "  else { return b; }"
+                "}");
+    printTacGen("int max(int a, int b) {"
+                "  int m;"
+                "  if (a > b) { m = a; }"
+                "  else { m = b; }"
+                "  return m;"
+                "}");
+    printTacGen("int max3(int a, int b, int c) {"
+                "  if (a > b) {"
+                "    if (a > c) return a;"
+                "    else return c;"
+                "  } else {"
+                "    if (b > c) return b;"
+                "    else return c;"
+                "  }"
+                "}");
+    printTacGen("int isNull(int* p) {"
+                "  if (p) {"
+                "    return 1;"
+                "  } else {"
+                "    return 0;"
+                "  }"
+                "}");
+    printTacGen("int not5(int a) {"
+                "  if (a - 5) {"
+                "    return 1;"
+                "  } else {"
+                "    return 0;"
+                "  }"
+                "}");
+
+    printTacGen("int sum() {"
+                "  int i;"
+                "  int sum = 0;"
+                "  for (i = 1; i <= 100; i = i + 1) {"
+                "    sum = sum + i;"
+                "  }"
+                "  return sum;"
+                "}");
+    printTacGen("void sum(int* result) {"
+                "  int i; int s = 0;"
+                "  for (i = 1; i <= 100; i = i + 1) {"
+                "    s = s + i;"
+                "  }"
+                "  *result = s;"
+                "}");
+    printTacGen("struct Stack; "
+                "int stack_empty(Stack* s);"
+                "void stack_pop(Stack* s);"
+                "void makeItEmpty(Stack* s) {"
+                "  while (!stack_empty(s)) {"
+                "    stack_pop(s);"
+                "  }"
+                "}");
+    printTacGen("int parse(char* str)"
+                "{"
+                "  int sum = 0;"
+                "  while (str != (char*)0 && *str != '\\0') {"
+                "    sum = sum + *str;"
+                "  }"
+                "  return sum;"
+                "}");
+    printTacGen("int parse(char* pstr[], int size)"
+                "{"
+                "  int sum = 0;"
+                "  int i;"
+                "  while (*pstr != (void*)0) {"
+                "    for (i = 0; (*pstr)[i] != '\\0'; i=i+1) {"
+                "      sum = sum + (*pstr)[i];"
+                "    }"
+                "    pstr = pstr + 1;"
+                "  }"
+                "  return sum;"
+                "}");
+    printTacGen("void* address() { int arr[10][10]; return (void*) &arr[1][2]; }");
+    printTacGen("int value() { int arr[10][10]; return arr[1][2]; }");
+    printTacGen("int chCount(char const* str) {"
+                "  int cnt = 0;"
+                "  int i = 0;"
+                "  while (!(str[i] == '\\n' || str[i] == '\\0')) {"
+                "    cnt = cnt + 1;"
+                "    i = i + 1;"
+                "  }"
+                "  return cnt;"
+                "}"); */
+    printTacGen("struct Node { int val; Node* next; };"
+             "int func() {"
+             "  Node head;"
+             "  head.val = 345; "
+             "  Node tail;"
+             "  tail.val = 678;"
+             "  tail.next = (Node*) 0;"
+             "  head.next = &tail;"
+             "  return head.next->val;"
+             "}");
 }
 
 int main(int argc, char* argv[])
 {
     // testCompoundLayout();
     // testSimpleProgram();
-    testSema();
-    // testTacGen();
+    // testSema();
+    testTacGen();
 }

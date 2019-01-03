@@ -149,27 +149,7 @@ private:
         type_ = t;
     }
 
-    void copyUnionTrivial(const Token& rhs)
-    {
-        assert(!rhs.hasString());
-        switch (rhs.type_) {
-        case TokenType::IntLiteral:
-            ival_ = rhs.ival_;
-            break;
-        case TokenType::DoubleLiteral:
-            dval_ = rhs.dval_;
-            break;
-        case TokenType::CharLiteral:
-            cval_ = rhs.cval_;
-            break;
-        case TokenType::Operator:
-            optor_ = rhs.optor_;
-            break;
-        case TokenType::Keyword:
-            kwd_ = rhs.kwd_;
-            break;
-        }
-    }
+    void copyUnionTrivial(const Token& rhs);
 };
 
 

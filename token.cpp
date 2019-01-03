@@ -101,6 +101,7 @@ Token &Token::operator=(const Token &rhs)
     bool lhsStr = hasString();
     bool rhsStr = rhs.hasString();
     type_ = rhs.type_;
+    context_ = rhs.context_;
     if (lhsStr) {
         if (rhsStr) {
             str_ = rhs.str_;
@@ -115,7 +116,7 @@ Token &Token::operator=(const Token &rhs)
             copyUnionTrivial(rhs);
         }
     }
-    context_ = rhs.context_;
+
 	return *this;
 }
 
@@ -343,5 +344,30 @@ void Token::setVarArgs()
 {
     checkAndDestroy();
     type_ = TokenType::VarArgs;
+}
+
+void Token::copyUnionTrivial(const Token& rhs)
+{
+    assert(!rhs.hasString());
+    switch (rhs.type_) {
+    case TokenType::IntLiteral:
+        ival_ = rhs.ival_;
+        break;
+    case TokenType::UnsignedLiteral:
+        uival_ = rhs.uival_;
+        break;
+    case TokenType::DoubleLiteral:
+        dval_ = rhs.dval_;
+        break;
+    case TokenType::CharLiteral:
+        cval_ = rhs.cval_;
+        break;
+    case TokenType::Operator:
+        optor_ = rhs.optor_;
+        break;
+    case TokenType::Keyword:
+        kwd_ = rhs.kwd_;
+        break;
+    }
 }
 

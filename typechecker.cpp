@@ -225,7 +225,7 @@ void TypeChecker::visit(BinaryOpExpr* node)
         if (Type::isArithmetic(lhs->evalType) && Type::isArithmetic(rhs->evalType)) {
             checkArithmetic(node, lhs, rhs);
             node->evalType = BuiltInType::charType();
-            /// so the type set for node->evalTyppe in chechArithmetic is discarded
+            /// so the type set for node->evalType in checkArithmetic is discarded
         } else if (lhs->evalType->tag() == Type::Pointer
                    && rhs->evalType->tag() == Type::Pointer) {
             checkPointerCompare(node, lhs, rhs);
@@ -233,7 +233,9 @@ void TypeChecker::visit(BinaryOpExpr* node)
             throw Error(node->tok(), "can't compare lhs and rhs");
         }
         node->evalType = BuiltInType::charType();
+        break;
     }
+
 
     case Token::BitAnd:
     case Token::BitXor:
@@ -350,6 +352,7 @@ void TypeChecker::visit(MemberExpr* node)
 void TypeChecker::visit(ArrayRefExpr* node)
 {
     node->head_->accept(*this);
+    node->index_->accept(*this);
     auto& ty = node->head_->evalType;
     if (ty->tag() == Type::Array
         || ty->tag() == Type::Pointer) {
@@ -376,7 +379,7 @@ void TypeChecker::visit(VarExpr* node)
         throw Error(node->tok(), std::string("variable ") + node->name_ + " does not exist");
     }
     auto& type = ent->type;
-    if (ent->position > node->tok()) {
+    if (ent->textPosition > node->tok()) {
         throw Error(node->tok(), "variable is used before declaration");
     }
     checkVoid(type, node->tok());
@@ -545,7 +548,8 @@ void TypeChecker::checkPointerCompare(Expr* parent,
            && rhs->evalType->tag() == Type::Pointer);
     auto lhsTy = static_cast<PointerType*>(lhs->evalType.get());
     auto rhsTy = static_cast<PointerType*>(rhs->evalType.get());
-    if (!lhsTy->base()->equalUnqual(rhsTy->base())) {
+    if (!Type::isVoid(lhsTy->base()) && !Type::isVoid(rhsTy->base())
+        && !lhsTy->base()->equalUnqual(rhsTy->base())) {
         throw Error(parent->tok(), "cannot compare between incompatible pointer types");
     }
 }

@@ -5,6 +5,7 @@
 #include "tacdef.h"
 #include <list>
 #include <stack>
+#include <optional>
 
 class TacGenerator : public Visitor
 {
@@ -32,9 +33,16 @@ public:
         ir_.addGlobalVar(name, so);
     }
 
+    Tac::Label nextLabel()
+    {
+        return Tac::Label(labelNo_++);
+    }
+
 private:
     std::stack<SymbolTable*> scopeStack_;
     Tac::LinearTacIR ir_;
+
+    int labelNo_ = 1;
 };
 
 class FuncGenerator : public Visitor
@@ -55,9 +63,11 @@ public:
         }
 
         ~TempStackObjectDeallocGuard() {
-            auto so = fg_.tempStackObjects_.top();
-            fg_.tempStackObjects_.pop();
-            fg_.emit({Tac::Dealloca, so});
+            while (!fg_.tempStackObjects_.empty()) {
+                auto so = fg_.tempStackObjects_.top();
+                fg_.tempStackObjects_.pop();
+                fg_.emit({Tac::Dealloca, so});
+            }
         }
     };
 
@@ -101,15 +111,15 @@ public:
 
     Tac::Reg nextReg();
     Tac::Label nextLabel();
-    Tac::StackObject nextStackObject(size_t align, uint64_t size);
+    Tac::StackObject nextStackObject(uint64_t size, size_t align);
     SymbolTable& currScope() { return tacGen_.currScope(); }
     void pushScope(SymbolTable* s) { tacGen_.pushScope(s); }
     void popScope() { tacGen_.popScope(); }
 
-    std::list<Tac::Quad>::iterator emit(const Tac::Quad& quad);
+    std::list<Tac::Quad>::iterator emit(Tac::Quad&& quad);
     std::list<Tac::Quad>::iterator lastQuad();
     void pushTempStackObject(const Tac::StackObject& s) { tempStackObjects_.push(s); }
-    int addLiteral(Tac::StaticObject const& o) { tacGen_.addLiteral(o); }
+    int addLiteral(Tac::StaticObject const& o) { return tacGen_.addLiteral(o); }
     void addGlobalVar(std::string const& s, Tac::StaticObject const& o)
     {
         tacGen_.addGlobalVar(s, o);
@@ -139,7 +149,7 @@ protected:
         return funcGenerator_.nextStackObject(size, align);
     }
     SymbolTable& currScope() { return funcGenerator_.currScope(); }
-    std::list<Tac::Quad>::iterator emit(const Tac::Quad& quad) { return funcGenerator_.emit(quad); }
+    std::list<Tac::Quad>::iterator emit(Tac::Quad&& quad) { return funcGenerator_.emit(std::move(quad)); }
     std::list<Tac::Quad>::iterator lastQuad() { return funcGenerator_.lastQuad(); }
     void pushTempStackObject(const Tac::StackObject& s) { funcGenerator_.pushTempStackObject(s); }
     int addLiteral(Tac::StaticObject const& o) { return funcGenerator_.addLiteral(o); }
@@ -189,8 +199,8 @@ private:
 class ValueGenerator : public Visitor, public FuncUtil
 {
 public:
-    explicit ValueGenerator(FuncGenerator& t)
-            : FuncUtil(t) {}
+    explicit ValueGenerator(FuncGenerator& t) : FuncUtil(t) {}
+    ValueGenerator(FuncGenerator& t, Tac::Reg aim);
 
     Tac::Reg value() { return reg_; };
 
@@ -207,11 +217,19 @@ public:
 
 private:
     Tac::Reg reg_;
-
+    std::optional<Tac::Reg> target_;
     Tac::Reg cast(Tac::Reg reg,
                   const std::shared_ptr<Type>& from, const std::shared_ptr<Type>& to,
                   bool inplace);
 
+    /// an substitution of 'nextReg()'
+    Tac::Reg regToWrite() {
+        if (target_.has_value()) {
+            return target_.value();
+        } else {
+            return nextReg();
+        }
+    }
 
 };
 

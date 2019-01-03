@@ -742,7 +742,7 @@ std::shared_ptr<Block> Parser::parseBlock(SymbolTable* outer, bool isFuncBody)
     if (tokens_.peek().type() == Token::RBrace) {
         tokens_.next();
     } else {
-        throw Error(&tokens_.peek(), "miss '}' after compound statements");
+        throw Error(&tokens_.peek(), "miss '}' after block statements");
     }
 
     scopeStack_.pop();
@@ -856,7 +856,7 @@ Parser::parseMemberExtract(std::shared_ptr<Expr> suffix, Token const* first)
         // foo->x to (*foo).x
         tokens_.next();
         if (tokens_.peek().type() == Token::Name) {
-            auto data = std::make_shared<UnaryOpExpr>(first, suffix, Token::Mult);
+            auto data = std::make_shared<UnaryOpExpr>(first, suffix, Token::OperatorType::Mult);
             ret = std::make_shared<MemberExpr>(first, data, tokens_.peek().name());
             tokens_.next();
         } else {
@@ -1168,9 +1168,9 @@ std::shared_ptr<ForStmt> Parser::parseForStmt()
     }
     tokens_.next();*/
 
-    auto init = parseExprInForHead();
-    auto cond = parseExprInForHead();
-    auto stepby = parseExprInForHead();
+    auto init = parseExprInForHead(false);
+    auto cond = parseExprInForHead(false);
+    auto stepby = parseExprInForHead(true);
 
     auto body = parseStmt();
     return std::make_shared<ForStmt>(&forTok, init, cond, stepby, body);
@@ -1314,14 +1314,14 @@ std::shared_ptr<ASTNode> Parser::parseTypeDeclOrDef()
     }
 }
 
-std::shared_ptr<Expr> Parser::parseExprInForHead()
+std::shared_ptr<Expr> Parser::parseExprInForHead(bool last)
 {
     if (tokens_.peek().type() == Token::Semicolon) {
         tokens_.next();
         return nullptr;
     } else {
         auto expr = parseExpr();
-        if (tokens_.peek().type() != Token::Semicolon) {
+        if (!last && tokens_.peek().type() != Token::Semicolon) {
             throw Error(&tokens_.peek(), "miss ';' in for statement");
         }
         tokens_.next();

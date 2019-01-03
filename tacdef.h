@@ -10,6 +10,7 @@
 #include <map>
 #include <unordered_set>
 #include <cinttypes>
+#include <type_traits>
 #include "platform.h"
 
 struct SymtabEntry;
@@ -43,7 +44,8 @@ enum Opcode
 
     /** 用于从函数体内获得参数的值或地址 */
     /** num 算上返回值变成的参数 */
-            GetParamVal, GetParamPtr, /// GetParam* num empty reg
+    GetParamVal, /// maybe from memory!!! should not be optimized out
+    GetParamPtr, /// GetParam* num empty reg
 
     Alloca, /// Alloca <StackObject> <empty> <reg(save the address)> allocate memory on stack
     Dealloca, /// Dealloca <StackObject>
@@ -74,11 +76,6 @@ struct Label
     bool operator==(Label rhs) const;
 
     /// label must be unique in file scope.
-    static Label next()
-    {
-        static int no = 1;
-        return Label(no++);
-    }
 };
 
 /// represent a piece of stack memory
@@ -105,7 +102,7 @@ struct StaticObject
     {
         size_t size;
 
-        bool operator==(Padding rhs)
+        bool operator==(const Padding& rhs) const
         { return size == rhs.size; }
     };
 
@@ -114,13 +111,12 @@ struct StaticObject
     /// use a unique sequence number as their id
 
 
-    using BinData = std::variant<int8_t, int16_t,
-            int32_t, int64_t, Padding>; /// bin data like .word .half ...
-
-    std::variant<std::monostate,
-                 std::string, /// character data, null terminated ascii
-                 std::vector<BinData>// bin data
-                > data;
+    using BinData = std::variant<int8_t, int16_t, int32_t, int64_t, Padding>; /// bin data like .word .half
+    using DataType = std::variant<std::monostate,
+                                  std::string, /// character data, null terminated ascii
+                                  std::vector<BinData>// bin data
+                                 >;
+    DataType data;
 
     size_t size;
     size_t align;
@@ -136,66 +132,49 @@ struct StaticObject
     { return data == rhs.data; }
 
     bool initialized() const {
-        return data.index() == 0;
+        return data.index() != 0;
     }
 };
-}
-
-namespace std
-{
-    template<>
-    struct hash<Tac::StaticObject::Padding>
-    {
-        using argument_type = Tac::StaticObject::Padding;
-        using result_type = size_t;
-        result_type operator()(argument_type p) {
-            return std::hash<size_t>()(p.size);
-        }
-    };
-
-    template<>
-    struct hash<Tac::StaticObject>
-    {
-        using argument_type = Tac::StaticObject;
-        using result_type = size_t;
-        result_type operator()(argument_type const& so) {
-            if (so.data.index() == 0) {
-                return std::hash<std::string>()(std::get<0>(so.data));
-            } else {
-                const auto& v = std::get<1>(so.data);
-                result_type res = 0;
-                for (const auto& d : v) {
-                    res ^= std::hash<argument_type::BinData>{}(d) + 0x9e3779b9;
-                }
-                return res;
-            }
-        }
-    };
-
-}
-
-namespace Tac {
 
 struct Var
 {
     /// int64 : big enough
-    using ImmType = int64_t;
+
+    struct ImmType
+    {
+        int64_t val;
+
+        /// not necessary to be explicit
+        template<typename IntType>
+        ImmType(IntType v) : val(static_cast<int64_t>(v)) {
+            static_assert(std::is_integral_v<IntType>);
+        }
+    };
+
+    struct FuncLabel
+    {
+        std::string name;
+    };
+
+    struct VarLabel
+    {
+        std::string name;
+    };
 
     std::variant<std::monostate,
                  Reg, ImmType, StackObject, Label,
-                 SymtabEntry* /* for functions only */,
-                 std::string /* for global variables only */
+                 FuncLabel /* for functions only */,
+                 VarLabel /* for global variables only */
                  > uvar;
 
     Var() {}
     Var(Reg r);
     Var(const StackObject& o);
-    Var(SymtabEntry* s); /// for functions only
-    Var(const std::string& s);
+    Var(FuncLabel f); /// for functions only
+    Var(VarLabel v);
     Var(ImmType imm);
     Var(Label l);
     std::string toString() const;
-    bool operator==(const Var&) const;
     static const Var empty;
 };
 
@@ -209,10 +188,12 @@ struct Var
 struct ArgInfo
 {
     enum { Value, Ptr };
+
     Reg reg;
     int regMeans; /// reg is a value or a ptr
     size_t size;
     size_t align;
+    bool scalar; /// only scalars are possible to be passed by registers
 };
 
 using ArgPassingSpec = std::vector<ArgInfo>;
@@ -242,7 +223,6 @@ struct Quad
     }
 
     std::string toString() const;
-    bool operator==(const Quad& rhs) const;
 };
 
 struct Function

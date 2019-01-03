@@ -60,7 +60,7 @@ public:
     std::shared_ptr<Expr> parseConditional();
     std::shared_ptr<Expr> parseAssignment(); // = += -= ...
 
-    std::shared_ptr<Expr> parseExprInForHead();
+    std::shared_ptr<Expr> parseExprInForHead(bool last = false);
 
     template<typename Func>
     std::shared_ptr<Expr>
