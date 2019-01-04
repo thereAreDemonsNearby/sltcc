@@ -32,6 +32,7 @@ public:
     const std::string& what() const { return what_; }
     Token const* token() const { return tok_; }
     void what(std::string e) { what_ = std::move(e); }
+    int lineNumber() const;
 private:
     Token const* tok_;
     std::string what_;

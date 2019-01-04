@@ -114,8 +114,14 @@ std::string Quad::toString() const
     ret += opnd2.toString() + "\t";
     ret += res.toString();
 
-    /*while (ret.back() == ' ' || ret.back() == '\t')
-        ret.pop_back();*/
+    if (op == Call) {
+        assert(passingSpec);
+        for (auto const& s : *passingSpec) {
+            ret += "\t{"s + s.reg.toString() + " " + std::to_string(s.size) + " " +
+                    std::to_string(s.align) + (s.scalar ? " scalar" : " compound") +
+                    (s.regMeans == ArgInfo::Value ? " v" : " p") + "}";
+        }
+    }
     return ret;
 }
 

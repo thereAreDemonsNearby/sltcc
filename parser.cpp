@@ -164,12 +164,11 @@ std::shared_ptr<VarDef> Parser::parseVarDef(std::shared_ptr<Type> typeHead)
     auto& startTok = tokens_.peek();
     auto pair = parseTypeRest(std::move(typeHead));
     if (pair.second.empty()) {
-        throw Error(&startTok, "an variable identifier is needed");
+        throw Error(&startTok, "a variable identifier is needed");
     }
 
     auto& type = pair.first;
-    if (type->tag() == Type::BuiltIn
-        && static_cast<BuiltInType*>(type.get())->cat() == BuiltInType::Void) {
+    if (Type::isVoid(type)) {
         throw Error(&startTok, "variable of type void is not permitted");
     }
 
@@ -184,13 +183,13 @@ std::shared_ptr<VarDef> Parser::parseVarDef(std::shared_ptr<Type> typeHead)
         // init
         // sth like: int a = 1 + 2;
         tokens_.next();
-        initExpr = parseExpr();
+        initExpr = parseConditional();
     }
 
     auto def = std::make_shared<VarDef>(&startTok, pair.second, pair.first, initExpr);
 
     if (tokens_.peek().type() != Token::Semicolon) {
-        errors_.add(Error(&tokens_.peek(), "miss ';' after variable declaration"));
+        errors_.add(Error(&tokens_.peek(), "miss ';' after variable definition"));
     } else {
         tokens_.next();
     }
@@ -778,10 +777,11 @@ std::shared_ptr<Expr> Parser::parsePostfix(std::shared_ptr<Expr> prev)
             }
         }
 
-        /// return immidiately. no chance for recursion.
-        return std::make_shared<FuncCallExpr>(callOpTok,
+        /// need recursion: func().a;
+        ret = std::make_shared<FuncCallExpr>(callOpTok,
                                           static_cast<VarExpr*>(prev.get())->varName(),
                                           std::move(args));
+        return parsePostfix(ret);
 
     } else if (tokens_.peek().type() == Token::LBracket) {
         // a[2][3]

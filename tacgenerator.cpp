@@ -195,8 +195,7 @@ Tac::Label FuncGenerator::nextLabel()
 
 Tac::StackObject FuncGenerator::nextStackObject(uint64_t size, size_t align)
 {
-    static int stackObjectNo = 1;
-    return Tac::StackObject(stackObjectNo++, size, align);
+    return Tac::StackObject(stackObjectNo_++, size, align);
 }
 
 

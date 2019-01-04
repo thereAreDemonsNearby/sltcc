@@ -445,7 +445,7 @@ void printTacGen_(std::string str, int lineno)
     if (errs.count() != 0) {
         std::cout << "syntax error:\n";
         for (auto const& err: errs) {
-            std::cout << err.what() << "\n";
+            std::cout << "line" << err.token()->context().linum << ": " << err.what() << "\n";
         }
         return;
     }
@@ -567,17 +567,107 @@ void testTacGen()
                 "    i = i + 1;"
                 "  }"
                 "  return cnt;"
-                "}"); */
+                "}");
+    printTacGen("unsigned countBlank(char const* str) {"
+                "  unsigned cnt = 0;"
+                "  while (*str != '\\0') {"
+                "    if (*str == '\\t' || *str == '\\n' || *str == ' ') {"
+                "      cnt = cnt + 1;"
+                "    }"
+                "  }"
+                "  return cnt;"
+                "}");
     printTacGen("struct Node { int val; Node* next; };"
-             "int func() {"
-             "  Node head;"
-             "  head.val = 345; "
-             "  Node tail;"
-             "  tail.val = 678;"
-             "  tail.next = (Node*) 0;"
-             "  head.next = &tail;"
-             "  return head.next->val;"
-             "}");
+                "int func() {"
+                "  Node head;"
+                "  head.val = 345; "
+                "  Node tail;"
+                "  tail.val = 678;"
+                "  tail.next = (Node*) 0;"
+                "  head.next = &tail;"
+                "  return head.next->val;"
+                "}");
+    printTacGen("int testUnaryOps(int param)"
+                "{"
+                "  int a = param;"
+                "  int* p = &a;"
+                "  int b = ~a;"
+                "  int c = -a;"
+                "  return c;"
+                "}");
+    printTacGen("int testBinaryOps(int a, int b)"
+                "{"
+                "  int c = a / b;"
+                "  int d = b % c;"
+                "  int e = c * d;"
+                "  int f = d >> 4;"
+                "  unsigned g = f;"
+                "  unsigned h = g >> 4;"
+                "  int i = e ^ f;"
+                "  int j = e | f;"
+                "  int k = e & f;"
+                "}");
+
+    printTacGen("int add(int a, int b) {return a + b; }"
+                "int add3(int a, int b, int c) "
+                "{"
+                "  return add(add(a, b), c);"
+                "}");
+    printTacGen("int reduce(int arr[], unsigned size)"
+                "{"
+                "  int i;"
+                "  int sum = 0;"
+                "  for (i = 0; i < size; i = i + 1) {"
+                "    sum = sum + arr[i];"
+                "  }"
+                "  return sum;"
+                "}"
+                ""
+                "int nonsense() "
+                "{"
+                "  int arr[3];"
+                "  arr[0] = 1; arr[1] = 2; arr[2] = 3;"
+                "  return reduce(arr, 3);"
+                "}"); */
+
+    printTacGen("struct Info "
+                "{"
+                "  char name[2];"
+                "  int salary;"
+                "}; \n"
+                ""
+                "Info createPerson(char const* n, int s)"
+                "{"
+                "  Info info;"
+                "  info.name[0] = n[0]; info.name[1] = n[1];"
+                "  info.salary = s;"
+                "  return info;"
+                "}\n"
+                ""
+                "Info createXiaoming()"
+                "{"
+                "  return createPerson(\"xm\", 10000);"
+                "}\n"
+                ""
+                "int getSalary(Info info) { return info.salary; }\n"
+                "int getSalaryP(Info const* info) { return info->salary; }\n"
+                ""
+                "int nonsense()\n"
+                "{\n"
+                "  Info xiaoming = createXiaoming();\n"
+                "  int a = getSalary(xiaoming);\n"
+                "  int b = getSalaryP(&xiaoming);\n"
+                "  int c = createXiaoming().salary;\n"
+                "  return a + b + c;\n"
+                "}\n");
+
+    printTacGen("int a = 10000;"
+                "unsigned b = 4294967295u;"
+                "char c = 'a';"
+                "double d = 3.14;"
+                "int func() {"
+                "  int e = a;"
+                "}");
 }
 
 int main(int argc, char* argv[])

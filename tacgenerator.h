@@ -132,6 +132,7 @@ private:
     std::stack<Tac::StackObject> tempStackObjects_;
 
     int regNo_ = 0;
+    int stackObjectNo_ = 1;
 
     void compoundAssignment(CompoundType* type, Tac::Reg lhsAddr, Tac::Reg rhsAddr);
 };
