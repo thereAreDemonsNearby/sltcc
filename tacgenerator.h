@@ -219,6 +219,7 @@ public:
 private:
     Tac::Reg reg_;
     std::optional<Tac::Reg> target_;
+
     Tac::Reg cast(Tac::Reg reg,
                   const std::shared_ptr<Type>& from, const std::shared_ptr<Type>& to,
                   bool inplace);

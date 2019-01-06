@@ -279,6 +279,11 @@ void FuncGenerator::visit(BinaryOpExpr* node)
             } else {
                 ValueGenerator rhsGen(*this, lhsGen.addr());
                 node->rhs_->accept(rhsGen);
+                if ( ! (rhsGen.value() == lhsGen.addr())) {
+                    /// There are some cases that ValueGenerator WON'T generate code that
+                    /// write the target register. So we check these cases here.
+                    emit({Tac::Movrr, rhsGen.value(), Tac::Var::empty, lhsGen.addr()});
+                }
                 // emit({Tac::Movrr, rhsGen.value(), Tac::Var::empty, lhsGen.addr()});
             }
         } else {
@@ -1006,6 +1011,7 @@ void ValueGenerator::visit(VarExpr* node)
                     emit({properLoadInst(node->evalType, Tac::Loadr),
                           reg_, Tac::Var::empty, reg_});
                 } else {
+                    /// here
                     reg_ = std::get<Tac::Reg>(varEnt->irBinding);
                     inplace = false;
                 }

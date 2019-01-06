@@ -668,6 +668,24 @@ void testTacGen()
                 "int func() {"
                 "  int e = a;"
                 "}");
+
+    printTacGen("int func() {"
+                "  int a = 10;"
+                "  int b = a;"
+                "  int c = b + 55;"
+                "}");
+
+    printTacGen("int func() {"
+                "  int a = 10;"
+                "  int b = a + 1;"
+                "  int c = b + 55;"
+                "}");
+
+    printTacGen("int func() {"
+                "  int a = 10;"
+                "  unsigned b = (unsigned)a;"
+                "  unsigned c = b + 100;"
+                "}");
 }
 
 int main(int argc, char* argv[])
