@@ -10,7 +10,7 @@
 class TacGenerator : public Visitor
 {
 public:
-    Tac::LinearTacIR& ir() { return ir_; }
+    Tac::TacIR& ir() { return ir_; }
 
     void visit(ASTRoot* node) override;
     void visit(FuncDef* node) override;
@@ -40,7 +40,7 @@ public:
 
 private:
     std::stack<SymbolTable*> scopeStack_;
-    Tac::LinearTacIR ir_;
+    Tac::TacIR ir_;
 
     int labelNo_ = 1;
 };

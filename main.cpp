@@ -692,6 +692,12 @@ int main(int argc, char* argv[])
 {
     // testCompoundLayout();
     // testSimpleProgram();
+    /*printAst("int main() {"
+             "  int a; int b; int c; int d;"
+             "  if ( a > 3 || b + 4 <= 5 && c & d != a ) {"
+             "    return 1;"
+             "  }"
+             "}");*/
     // testSema();
     testTacGen();
 }

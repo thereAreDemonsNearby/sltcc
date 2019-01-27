@@ -239,7 +239,7 @@ struct Function
 };
 
 
-struct LinearTacIR
+struct TacIR
 {
     std::vector<std::pair<std::string, StaticObject>> globalVars;
     std::vector<StaticObject> literalPool;

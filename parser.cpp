@@ -1005,32 +1005,44 @@ std::shared_ptr<Expr> Parser::parseRelational()
 
 std::shared_ptr<Expr> Parser::parseEquality()
 {
-    return parseBinaryOp({Token::Eq, Token::Ne}, std::mem_fn(&Parser::parseRelational));
+    return parseBinaryOp2([&parser=*this](){ return parser.parseRelational(); },
+            Token::Eq, Token::Ne);
+    // return parseBinaryOp({Token::Eq, Token::Ne}, std::mem_fn(&Parser::parseRelational));
 }
 
 std::shared_ptr<Expr> Parser::parseBitAnd()
 {
-    return parseBinaryOp({Token::BitAnd}, std::mem_fn(&Parser::parseEquality));
+    return parseBinaryOp2([&parser=*this](){ return parser.parseEquality(); },
+            Token::BitAnd);
+    // return parseBinaryOp({Token::BitAnd}, std::mem_fn(&Parser::parseEquality));
 }
 
 std::shared_ptr<Expr> Parser::parseBitXor()
 {
-    return parseBinaryOp({Token::BitXor}, std::mem_fn(&Parser::parseBitAnd));
+    return parseBinaryOp2([&parser=*this](){ return parser.parseBitAnd();},
+            Token::BitXor);
+    // return parseBinaryOp({Token::BitXor}, std::mem_fn(&Parser::parseBitAnd));
 }
 
 std::shared_ptr<Expr> Parser::parseBitOr()
 {
-    return parseBinaryOp({Token::BitOr}, std::mem_fn(&Parser::parseBitXor));
+    return parseBinaryOp2([&parser=*this](){ return parser.parseBitXor(); },
+            Token::BitOr);
+    // return parseBinaryOp({Token::BitOr}, std::mem_fn(&Parser::parseBitXor));
 }
 
 std::shared_ptr<Expr> Parser::parseLogicalAnd()
 {
-    return parseBinaryOp({Token::And}, std::mem_fn(&Parser::parseBitOr));
+    return parseBinaryOp2([&parser=*this](){ return parser.parseBitOr(); },
+            Token::And);
+    // return parseBinaryOp({Token::And}, std::mem_fn(&Parser::parseBitOr));
 }
 
 std::shared_ptr<Expr> Parser::parseLogicalOr()
 {
-    return parseBinaryOp({Token::Or}, std::mem_fn(&Parser::parseLogicalAnd));
+    return parseBinaryOp2([&parser=*this](){ return parser.parseLogicalAnd(); },
+            Token::Or);
+    // return parseBinaryOp({Token::Or}, std::mem_fn(&Parser::parseLogicalAnd));
 }
 
 std::shared_ptr<Expr> Parser::parseConditional()
@@ -1328,3 +1340,5 @@ std::shared_ptr<Expr> Parser::parseExprInForHead(bool last)
         return expr;
     }
 }
+
+

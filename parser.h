@@ -66,6 +66,10 @@ public:
     std::shared_ptr<Expr>
     parseBinaryOp(std::vector<Token::OperatorType> li, const Func& fn);
 
+    template<typename Func, typename... Args>
+    std::shared_ptr<Expr>
+    parseBinaryOp2(Func&& fn, Args... optors);
+
 
     // about type:
     std::pair<std::shared_ptr<FuncType>, std::vector<std::string>>
@@ -108,6 +112,28 @@ Parser::parseBinaryOp(std::vector<Token::OperatorType> li, const Func& fn)
         auto op = p2peek->getOperator();
         tokens_.next();
         auto rhs = fn(*this);
+        lhs = std::make_shared<BinaryOpExpr>(p2peek, lhs, rhs, op);
+
+        p2peek = &tokens_.peek();
+    }
+
+    return lhs;
+}
+
+template<typename Func, typename... Args>
+std::shared_ptr<Expr> Parser::parseBinaryOp2(Func&& fn, Args... optors)
+{
+    auto lhs = fn();
+    auto p2peek = &tokens_.peek();
+    auto in = [] (Token::OperatorType op, auto... opSet) {
+        return ((op == opSet) || ...);
+    };
+
+    while (p2peek->type() == Token::Operator
+        && in(p2peek->getOperator(), optors...)) {
+        auto op = p2peek->getOperator();
+        tokens_.next();
+        auto rhs = fn();
         lhs = std::make_shared<BinaryOpExpr>(p2peek, lhs, rhs, op);
 
         p2peek = &tokens_.peek();

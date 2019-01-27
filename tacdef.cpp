@@ -167,7 +167,7 @@ std::string stringifyBinData(StaticObject::BinData const& d)
     return std::visit(Visitor{}, d);
 }
 
-std::string LinearTacIR::toString() const
+std::string TacIR::toString() const
 {
     std::string ret;
 
@@ -216,7 +216,7 @@ std::string LinearTacIR::toString() const
     return ret;
 }
 
-int LinearTacIR::addLiteral(const StaticObject& so)
+int TacIR::addLiteral(const StaticObject& so)
 {
     for (size_t i = 0; i < literalPool.size(); ++i) {
         if (literalPool[i] == so) {
@@ -227,7 +227,7 @@ int LinearTacIR::addLiteral(const StaticObject& so)
     return literalPool.size() - 1;
 }
 
-void LinearTacIR::addGlobalVar(const std::string& name, const StaticObject& so)
+void TacIR::addGlobalVar(const std::string& name, const StaticObject& so)
 {
     globalVars.emplace_back(name, so);
 }
