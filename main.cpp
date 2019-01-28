@@ -558,7 +558,7 @@ void testTacGen()
                 "  return sum;"
                 "}");
     printTacGen("void* address() { int arr[10][10]; return (void*) &arr[1][2]; }");
-    printTacGen("int value() { int arr[10][10]; return arr[1][2]; }");
+    printTacGen("int value() { int arr[10][10]; return arr[1][2]; }"); */
     printTacGen("int chCount(char const* str) {"
                 "  int cnt = 0;"
                 "  int i = 0;"
@@ -568,7 +568,7 @@ void testTacGen()
                 "  }"
                 "  return cnt;"
                 "}");
-    printTacGen("unsigned countBlank(char const* str) {"
+    /*printTacGen("unsigned countBlank(char const* str) {"
                 "  unsigned cnt = 0;"
                 "  while (*str != '\\0') {"
                 "    if (*str == '\\t' || *str == '\\n' || *str == ' ') {"

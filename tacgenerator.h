@@ -71,7 +71,9 @@ public:
         }
     };
 
-    Tac::Function& func() { return currFunction_; }
+    Tac::Function const& func() const { return currFunction_; };
+
+    Tac::Function& yieldFunc();
 
     void visit(FuncDef* node) override;
     void visit(Block* node) override;
@@ -118,6 +120,7 @@ public:
 
     std::list<Tac::Quad>::iterator emit(Tac::Quad&& quad);
     std::list<Tac::Quad>::iterator lastQuad();
+
     void pushTempStackObject(const Tac::StackObject& s) { tempStackObjects_.push(s); }
     int addLiteral(Tac::StaticObject const& o) { return tacGen_.addLiteral(o); }
     void addGlobalVar(std::string const& s, Tac::StaticObject const& o)
@@ -129,6 +132,7 @@ public:
 private:
     TacGenerator& tacGen_;
     Tac::Function currFunction_;
+    std::list<Tac::Quad> quads_;
     std::stack<Tac::StackObject> tempStackObjects_;
 
     int regNo_ = 0;

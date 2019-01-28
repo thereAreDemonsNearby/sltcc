@@ -80,6 +80,9 @@
 				</MakeCommands>
 			</Target>
 		</Build>
+		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/Array2D.h">
+			<Option target="sltcc"/>
+		</Unit>
 		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/SymbolTable.cpp">
 			<Option target="sltcc"/>
 		</Unit>

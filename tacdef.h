@@ -12,6 +12,7 @@
 #include <cinttypes>
 #include <type_traits>
 #include "platform.h"
+#include "Array2D.h"
 
 struct SymtabEntry;
 class ListSymtab;
@@ -74,6 +75,8 @@ struct Label
     std::string toString() const;
 
     bool operator==(Label rhs) const;
+
+    bool operator<(Label rhs) const { return n < rhs.n; }
 
     /// label must be unique in file scope.
 };
@@ -225,17 +228,27 @@ struct Quad
     std::string toString() const;
 };
 
+struct BasicBlock
+{
+    int n;
+    std::list<Quad> quads;
+
+    void add(Quad&& q) { quads.push_back(std::move(q)); }
+};
+
 struct Function
 {
     std::string name;
     ListSymtab* params;
     std::shared_ptr<Type> retType;
 
-    std::list<Quad> quads;
+    std::vector<BasicBlock> basicBlocks;
+    Array2D<bool> CFG;
 
     explicit Function(std::string n, ListSymtab* a, std::shared_ptr<Type> ret)
             : name(std::move(n)), params(a), retType(std::move(ret)) {}
     std::string toString() const;
+    void addBasicBlock(BasicBlock bb);
 };
 
 

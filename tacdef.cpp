@@ -129,14 +129,24 @@ std::string Function::toString() const
 {
     std::string ret{"def func "};
     ret.append(name).append("\n");
-    for (const auto& q : quads) {
-        if (q.op == LabelLine) {
-            ret.append(q.toString()).append(":\n");
-        } else {
-            ret.append("\t").append(q.toString()).append("\n");
+    for (const auto& b : basicBlocks) {
+        for (const auto& q : b.quads) {
+            if (q.op == LabelLine) {
+                ret.append(q.toString()).append(":\n");
+            } else {
+                ret.append("\t").append(q.toString()).append("\n");
+            }
         }
+        ret.append("    ******\n");
     }
     return ret;
+}
+
+void Function::addBasicBlock(BasicBlock bb)
+{
+    auto n = basicBlocks.size();
+    bb.n = static_cast<int>(n);
+    basicBlocks.push_back(std::move(bb));
 }
 
 std::string stringifyBinData(StaticObject::BinData const& d)
