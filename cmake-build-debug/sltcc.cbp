@@ -110,6 +110,9 @@
 		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/main.cpp">
 			<Option target="sltcc"/>
 		</Unit>
+		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/mips32.h">
+			<Option target="sltcc"/>
+		</Unit>
 		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/parenfulprinter.cpp">
 			<Option target="sltcc"/>
 		</Unit>
@@ -153,6 +156,9 @@
 			<Option target="sltcc"/>
 		</Unit>
 		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/typechecker.h">
+			<Option target="sltcc"/>
+		</Unit>
+		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/utils.h">
 			<Option target="sltcc"/>
 		</Unit>
 		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/visitor.h">

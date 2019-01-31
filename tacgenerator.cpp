@@ -1,5 +1,6 @@
 #include "tacgenerator.h"
 #include <iterator>
+#include "utils.h"
 
 namespace
 {
@@ -122,7 +123,7 @@ void FuncGenerator::visit(IfStmt* node)
         node->else_->accept(*this);
         auto outLabel = nextLabel();
         emit({Tac::LabelLine, outLabel});
-        quads_.insert(iter, {Tac::Jmp, outLabel});
+        quads_.insert(iter, {Tac::Jmp, Tac::Var::empty, Tac::Var::empty, outLabel});
     } else {
         node->then_->accept(*this);
         emit({Tac::LabelLine, falseLabel});
@@ -137,7 +138,7 @@ void FuncGenerator::visit(WhileStmt* node)
     emit({Tac::LabelLine, beginLabel});
     node->cond_->accept(bg);
     node->body_->accept(*this);
-    emit({Tac::Jmp, beginLabel});
+    emit({Tac::Jmp, Tac::Var::empty, Tac::Var::empty, beginLabel});
     emit({Tac::LabelLine, outLabel});
 }
 
@@ -157,7 +158,7 @@ void FuncGenerator::visit(ForStmt* node)
     node->body_->accept(*this);
     if (node->stepby_)
         node->stepby_->accept(*this);
-    emit({Tac::Jmp, beginLabel});
+    emit({Tac::Jmp, Tac::Var::empty, Tac::Var::empty, beginLabel});
     emit({Tac::LabelLine, outLabel});
 }
 
@@ -281,7 +282,7 @@ void FuncGenerator::visit(BinaryOpExpr* node)
                 node->rhs_->accept(rhsGen);
                 if ( ! (rhsGen.value() == lhsGen.addr())) {
                     /// There are some cases that ValueGenerator WON'T generate code that
-                    /// write the target register. So we check these cases here.
+                    /// writes the target register. So we check these cases here.
                     emit({Tac::Movrr, rhsGen.value(), Tac::Var::empty, lhsGen.addr()});
                 }
                 // emit({Tac::Movrr, rhsGen.value(), Tac::Var::empty, lhsGen.addr()});
@@ -414,12 +415,12 @@ void FuncGenerator::visit(ReturnStmt* node)
 
 Tac::Function& FuncGenerator::yieldFunc()
 {
-    std::map<Tac::Label, int> labelToBlockNum;
+    std::map<Tac::Label, Tac::BasicBlockPtr> labelToBlock;
     auto iter = quads_.begin();
     if (iter != quads_.end()) {
 
         Tac::BasicBlock block;
-        block.add(std::move(*iter));
+        block.addQuad(std::move(*iter));
         ++iter;
 
         while (iter != quads_.end()) {
@@ -427,68 +428,55 @@ Tac::Function& FuncGenerator::yieldFunc()
                 currFunction_.addBasicBlock(std::move(block));
                 block = Tac::BasicBlock();
 
-                if (auto& lastBlock = currFunction_.basicBlocks.back();
-                    lastBlock.quads.front().op == Tac::LabelLine) {
-                    auto [it, inserted] = labelToBlockNum.insert(
-                            {std::get<Tac::Label>(lastBlock.quads.front().res.uvar), lastBlock.n});
+                if (auto prevBlock = std::prev(currFunction_.basicBlocks.end());
+                    prevBlock->quads.front().op == Tac::LabelLine) {
+                    auto [it, inserted] = labelToBlock.insert(
+                            {std::get<Tac::Label>(prevBlock->quads.front().opnd1.uvar), prevBlock});
                     assert(inserted);
                 }
             }
 
-            block.add(std::move(*iter));
+            block.addQuad(std::move(*iter));
             ++iter;
         }
 
         currFunction_.addBasicBlock(std::move(block));
-        if (auto& lastBlock = currFunction_.basicBlocks.back();
-                lastBlock.quads.front().op == Tac::LabelLine) {
-            auto [it, inserted] = labelToBlockNum.insert(
-                    {std::get<Tac::Label>(lastBlock.quads.front().res.uvar), lastBlock.n});
+        if (auto prevBlock = std::prev(currFunction_.basicBlocks.end());
+                prevBlock->quads.front().op == Tac::LabelLine) {
+            auto [it, inserted] = labelToBlock.insert(
+                    {std::get<Tac::Label>(prevBlock->quads.front().opnd1.uvar), prevBlock});
             assert(inserted);
         }
     }
-
-    auto between = [](auto e, auto left, auto right) {
-        return e >= left && e <= right;
-    };
-
-    auto toInt = [](auto enumVal) {
-        return static_cast<std::underlying_type_t<decltype(enumVal)>>(enumVal);
-    };
-
-    currFunction_.CFG = Array2D<bool>(currFunction_.basicBlocks.size(),
-                                currFunction_.basicBlocks.size());
-    currFunction_.CFG.fill(false);
 
     for (auto blockIter = currFunction_.basicBlocks.begin();
          blockIter != currFunction_.basicBlocks.end(); ++blockIter) {
 
         for (auto quadIter = blockIter->quads.begin();
              true; ++quadIter) {
-            if (between(toInt(quadIter->op),
-                    toInt(Tac::Jmp), toInt(Tac::Jleu))) {
+
+            if (quadIter == blockIter->quads.end()) {
+                auto nextBlock = std::next(blockIter);
+                if (nextBlock != currFunction_.basicBlocks.end()) {
+                    blockIter->addEdge(nextBlock);
+                }
+
+                break;
+            }
+
+            if (enumBetween(Tac::Jmp, quadIter->op, Tac::Jleu)) {
                 Tac::Label target = std::get<Tac::Label>(quadIter->res.uvar);
-                auto foundIter = labelToBlockNum.find(target);
-                assert(foundIter != labelToBlockNum.end());
-                currFunction_.CFG[blockIter->n][foundIter->second] = true;
+                auto found = labelToBlock.find(target);
+                assert(found != labelToBlock.end());
+                blockIter->addEdge(found->second);
                 if (quadIter->op == Tac::Jmp) {
                     /// unconditional jump
                     blockIter->quads.erase(std::next(quadIter), blockIter->quads.end());
-
                     break;
                 }
             } else if (quadIter->op == Tac::Ret) {
                 /// unconditional quit
                 blockIter->quads.erase(std::next(quadIter), blockIter->quads.end());
-                break;
-            }
-
-            if (quadIter == blockIter->quads.end()) {
-                auto nextBlock = std::next(blockIter);
-                if (nextBlock != currFunction_.basicBlocks.end()) {
-                    currFunction_.CFG[blockIter->n][nextBlock->n] = true;
-                }
-
                 break;
             }
         }
@@ -824,7 +812,7 @@ void ValueGenerator::visit(UnaryOpExpr* node)
         reg_ = regToWrite();
         auto outLabel = nextLabel();
         emit({Tac::Loadi, Tac::Var::ImmType(1), Tac::Var::empty, reg_});
-        emit({Tac::Jmp, outLabel});
+        emit({Tac::Jmp, Tac::Var::empty, Tac::Var::empty, outLabel});
         emit({Tac::LabelLine, falseLabel});
         emit({Tac::Loadi, Tac::Var::ImmType(0), Tac::Var::empty, reg_});
         emit({Tac::LabelLine, outLabel});
@@ -893,7 +881,7 @@ void ValueGenerator::visit(BinaryOpExpr* node)
         reg_ = regToWrite();
         auto outLabel = nextLabel();
         emit({Tac::Loadi, Tac::Var::ImmType(1), Tac::Var::empty, reg_});
-        emit({Tac::Jmp, outLabel});
+        emit({Tac::Jmp, Tac::Var::empty, Tac::Var::empty, outLabel});
         emit({Tac::LabelLine, falseLabel});
         emit({Tac::Loadi, Tac::Var::ImmType(0), Tac::Var::empty, reg_});
         emit({Tac::LabelLine, outLabel});

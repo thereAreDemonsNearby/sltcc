@@ -137,15 +137,15 @@ std::string Function::toString() const
                 ret.append("\t").append(q.toString()).append("\n");
             }
         }
-        ret.append("    ******\n");
+        for (auto bp : b.edges) {
+            ret.append("        ==> ").append(bp->quads.front().toString()).append("\n");
+        }
     }
     return ret;
 }
 
 void Function::addBasicBlock(BasicBlock bb)
 {
-    auto n = basicBlocks.size();
-    bb.n = static_cast<int>(n);
     basicBlocks.push_back(std::move(bb));
 }
 

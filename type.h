@@ -291,7 +291,7 @@ private:
 	bool hasVarArgs_ = false;
 };
 
-// TODO : add support to enum
+// TODO : addQuad support to enum
 
 class AliasType : public Type
 {

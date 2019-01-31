@@ -12,7 +12,6 @@
 #include <cinttypes>
 #include <type_traits>
 #include "platform.h"
-#include "Array2D.h"
 
 struct SymtabEntry;
 class ListSymtab;
@@ -25,7 +24,7 @@ namespace Tac
 enum Opcode
 {
     Nop,
-    LabelLine,
+    LabelLine, /** LabelLine <label> */
     Loadr /** load value. The address is specified by a register.*/,
     Loadrc /** load value. The address is specified by a register and an offset */,
     Loadi /** load an immidiate number */,
@@ -36,7 +35,7 @@ enum Opcode
     Shl, Shrl, Shra, BAnd, BOr, BXor, BInv,
     Movrr, /// copy between reigisters
     Extu, Exts, /// 扩展指令表示将一定长度（由指令的width字段指出）的半字或字节扩展到字长
-    Jmp, Jeq, Jne, Jgs, Jges, Jls, Jles,
+    Jmp, /** Jmp <> <> <dest> */Jeq, Jne, Jgs, Jges, Jls, Jles,
     Jgu, Jgeu, Jlu, Jleu,
     Call, /** call <funcent> <empty> <reg(return value)> */
     Ret, /** return a value in register : retval %r1*/
@@ -228,12 +227,26 @@ struct Quad
     std::string toString() const;
 };
 
+
+struct BasicBlock;
+
+using BasicBlockList = std::list<BasicBlock>;
+using BasicBlockPtr = BasicBlockList::iterator;
+
 struct BasicBlock
 {
-    int n;
     std::list<Quad> quads;
+    std::list<BasicBlockPtr> edges;
 
-    void add(Quad&& q) { quads.push_back(std::move(q)); }
+    void addQuad(Quad&& q) { quads.push_back(std::move(q)); }
+    void addEdge(BasicBlockPtr p)
+    {
+        for (auto edge : edges) {
+            if (p == edge) return;
+        }
+
+        edges.push_back(p);
+    }
 };
 
 struct Function
@@ -242,8 +255,7 @@ struct Function
     ListSymtab* params;
     std::shared_ptr<Type> retType;
 
-    std::vector<BasicBlock> basicBlocks;
-    Array2D<bool> CFG;
+    BasicBlockList basicBlocks;
 
     explicit Function(std::string n, ListSymtab* a, std::shared_ptr<Type> ret)
             : name(std::move(n)), params(a), retType(std::move(ret)) {}

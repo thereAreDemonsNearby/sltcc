@@ -27,7 +27,7 @@ bool Parser::isAboutType(const Token& tok)
             auto tag = entry->type->tag();
             if (tag == Type::Incomplete || tag == Type::Compound
                 || tag == Type::Enum) {
-                // TODO maybe add type alias
+                // TODO maybe addQuad type alias
                 return true;
             } else {
                 return false;
@@ -56,7 +56,7 @@ void Parser::skipErrorParts()
 
 bool Parser::isUserDefinedType(Type::Tag tag)
 {
-    // TODO maybe add type alias
+    // TODO maybe addQuad type alias
     return tag == Type::Incomplete || tag == Type::Compound
            || tag == Type::Enum || tag == Type::Alias;
 }

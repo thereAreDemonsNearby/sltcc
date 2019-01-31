@@ -479,6 +479,7 @@ void testTacGen()
     printTacGen("int* advancePtr(int* p, int n) { return p + n; }");
     printTacGen("int* advancePtr(int (*parr)[10], int n) { return (int*)(parr + n); }");
     printTacGen("struct S { char a; int b; }; S* prevPtr(S* p, int n) { return p - n; }");
+     */
 
     printTacGen("int max(int a, int b) {"
                 "  if (a > b) { return a; }"
@@ -529,6 +530,7 @@ void testTacGen()
                 "  }"
                 "  *result = s;"
                 "}");
+    /*
     printTacGen("struct Stack; "
                 "int stack_empty(Stack* s);"
                 "void stack_pop(Stack* s);"
@@ -611,7 +613,7 @@ void testTacGen()
     printTacGen("int add(int a, int b) {return a + b; }"
                 "int add3(int a, int b, int c) "
                 "{"
-                "  return add(add(a, b), c);"
+                "  return add(addQuad(a, b), c);"
                 "}");
     printTacGen("int reduce(int arr[], unsigned size)"
                 "{"
@@ -665,7 +667,8 @@ void testTacGen()
                 "unsigned b = 4294967295u;"
                 "char c = 'a';"
                 "double d = 3.14;"
-                "int func() {"
+                "int func() "
+                "{"
                 "  int e = a;"
                 "}");
 
