@@ -1,6 +1,19 @@
 #include "tacgenerator.h"
 #include <iterator>
+#include <set>
 #include "utils.h"
+
+namespace std
+{
+template<>
+struct hash<Tac::BasicBlockPtr>
+{
+    size_t operator()(Tac::BasicBlockPtr p) const
+    {
+        return std::hash<decltype(&(*p))>()(&(*p));
+    }
+};
+}
 
 namespace
 {
@@ -415,38 +428,42 @@ void FuncGenerator::visit(ReturnStmt* node)
 
 Tac::Function& FuncGenerator::yieldFunc()
 {
+    /// make CFG from linear code
     std::map<Tac::Label, Tac::BasicBlockPtr> labelToBlock;
     auto iter = quads_.begin();
     if (iter != quads_.end()) {
 
         Tac::BasicBlock block;
+        auto afterAddBasicBlock = [&labelToBlock](Tac::BasicBlockPtr bp) {
+            if (bp->quads.front().op == Tac::LabelLine) {
+                auto [it, inserted] = labelToBlock.insert(
+                        {std::get<Tac::Label>(bp->quads.front().opnd1.uvar), bp});
+                assert(inserted);
+            }
+        };
+
         block.addQuad(std::move(*iter));
         ++iter;
 
         while (iter != quads_.end()) {
-            if (iter->op == Tac::LabelLine) {
-                currFunction_.addBasicBlock(std::move(block));
+            if (iter->op == Tac::LabelLine ||
+                enumBetween(Tac::Jmp, std::prev(iter)->op, Tac::Jleu)) {
+                currFunction_.addBasicBlock(std::move(block), afterAddBasicBlock);
                 block = Tac::BasicBlock();
-
-                if (auto prevBlock = std::prev(currFunction_.basicBlocks.end());
-                    prevBlock->quads.front().op == Tac::LabelLine) {
-                    auto [it, inserted] = labelToBlock.insert(
-                            {std::get<Tac::Label>(prevBlock->quads.front().opnd1.uvar), prevBlock});
-                    assert(inserted);
-                }
             }
 
             block.addQuad(std::move(*iter));
             ++iter;
         }
 
-        currFunction_.addBasicBlock(std::move(block));
-        if (auto prevBlock = std::prev(currFunction_.basicBlocks.end());
-                prevBlock->quads.front().op == Tac::LabelLine) {
-            auto [it, inserted] = labelToBlock.insert(
-                    {std::get<Tac::Label>(prevBlock->quads.front().opnd1.uvar), prevBlock});
-            assert(inserted);
-        }
+        currFunction_.addBasicBlock(std::move(block), afterAddBasicBlock);
+    }
+
+
+    std::unordered_set<Tac::BasicBlockPtr> unusedBlocks;
+    for (auto blockIter = std::next(currFunction_.basicBlocks.begin());
+         blockIter != currFunction_.basicBlocks.end(); ++blockIter) {
+        unusedBlocks.insert(blockIter);
     }
 
     for (auto blockIter = currFunction_.basicBlocks.begin();
@@ -459,6 +476,7 @@ Tac::Function& FuncGenerator::yieldFunc()
                 auto nextBlock = std::next(blockIter);
                 if (nextBlock != currFunction_.basicBlocks.end()) {
                     blockIter->addEdge(nextBlock);
+                    unusedBlocks.erase(nextBlock);
                 }
 
                 break;
@@ -469,17 +487,27 @@ Tac::Function& FuncGenerator::yieldFunc()
                 auto found = labelToBlock.find(target);
                 assert(found != labelToBlock.end());
                 blockIter->addEdge(found->second);
-                if (quadIter->op == Tac::Jmp) {
-                    /// unconditional jump
-                    blockIter->quads.erase(std::next(quadIter), blockIter->quads.end());
-                    break;
+                unusedBlocks.erase(found->second);
+                if (quadIter->op != Tac::Jmp) {
+                    /// conditional jump; add fall through edges
+                    if (auto nextBlock = std::next(blockIter);
+                        nextBlock != currFunction_.basicBlocks.end()) {
+                        blockIter->addEdge(nextBlock);
+                        unusedBlocks.erase(nextBlock);
+                    }
                 }
+                assert(std::next(quadIter) == blockIter->quads.end());
+                break;
             } else if (quadIter->op == Tac::Ret) {
                 /// unconditional quit
                 blockIter->quads.erase(std::next(quadIter), blockIter->quads.end());
                 break;
             }
         }
+    }
+
+    for (auto iter : unusedBlocks) {
+        currFunction_.basicBlocks.erase(iter);
     }
 
 

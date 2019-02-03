@@ -261,6 +261,13 @@ struct Function
             : name(std::move(n)), params(a), retType(std::move(ret)) {}
     std::string toString() const;
     void addBasicBlock(BasicBlock bb);
+
+    template<typename Func>
+    void addBasicBlock(BasicBlock bb, Func&& finishingTouch)
+    {
+        addBasicBlock(std::move(bb));
+        finishingTouch(std::prev(basicBlocks.end()));
+    }
 };
 
 

@@ -22,7 +22,7 @@ enum class InstName {
 
     Move,
 
-    La, /// pseudo inst. la rdest addressOfLabel
+    La, /// pseudo inst. la rdest Label
     Lb, Lbu, Lh, Lhu, Lw, /// load rt imm(rs)
 
     Sb, Sh, Sw, /// store rt imm(rs)

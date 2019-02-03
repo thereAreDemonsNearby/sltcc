@@ -670,6 +670,7 @@ void testTacGen()
                 "int func() "
                 "{"
                 "  int e = a;"
+                "  return e;"
                 "}");
 
     printTacGen("int func() {"

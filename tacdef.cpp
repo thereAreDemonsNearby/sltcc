@@ -140,6 +140,7 @@ std::string Function::toString() const
         for (auto bp : b.edges) {
             ret.append("        ==> ").append(bp->quads.front().toString()).append("\n");
         }
+        ret.append("        *****\n");
     }
     return ret;
 }
