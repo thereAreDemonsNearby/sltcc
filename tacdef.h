@@ -99,7 +99,7 @@ struct StackObject
 ///                  2. 尺寸比较大的字面量(字符串字面量、大于字长的字面量如32位架构中的double)
 struct StaticObject
 {
-    /// padding
+    /// padding ".space"
     struct Padding
     {
         size_t size;
@@ -128,7 +128,7 @@ struct StaticObject
     StaticObject(size_t size, size_t align,
                  std::vector<BinData>&& data);
 
-    StaticObject(size_t size, size_t align);
+    StaticObject(size_t size, size_t align); /// not initialized. 'data' holds std::monostate
 
     bool operator==(const StaticObject& rhs) const
     { return data == rhs.data; }
@@ -236,17 +236,10 @@ using BasicBlockPtr = BasicBlockList::iterator;
 struct BasicBlock
 {
     std::list<Quad> quads;
-    std::list<BasicBlockPtr> edges;
+    std::vector<BasicBlockPtr> succs;
+    std::vector<BasicBlockPtr> preds;
 
     void addQuad(Quad&& q) { quads.push_back(std::move(q)); }
-    void addEdge(BasicBlockPtr p)
-    {
-        for (auto edge : edges) {
-            if (p == edge) return;
-        }
-
-        edges.push_back(p);
-    }
 };
 
 struct Function
@@ -274,7 +267,7 @@ struct Function
 struct TacIR
 {
     std::vector<std::pair<std::string, StaticObject>> globalVars;
-    std::vector<StaticObject> literalPool;
+    std::vector<StaticObject> literalPool; /// named by seq num
     std::vector<Function> funcs;
     std::string toString() const;
 

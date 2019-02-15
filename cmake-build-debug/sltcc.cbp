@@ -101,6 +101,12 @@
 		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/error.h">
 			<Option target="sltcc"/>
 		</Unit>
+		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/ir2mips.cpp">
+			<Option target="sltcc"/>
+		</Unit>
+		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/ir2mips.h">
+			<Option target="sltcc"/>
+		</Unit>
 		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/lex.cpp">
 			<Option target="sltcc"/>
 		</Unit>
@@ -108,6 +114,9 @@
 			<Option target="sltcc"/>
 		</Unit>
 		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/main.cpp">
+			<Option target="sltcc"/>
+		</Unit>
+		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/mips32.cpp">
 			<Option target="sltcc"/>
 		</Unit>
 		<Unit filename="/home/shiletong/codes/learncompiler/labs/sltcc/mips32.h">

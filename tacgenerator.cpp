@@ -426,6 +426,21 @@ void FuncGenerator::visit(ReturnStmt* node)
     }
 }
 
+namespace
+{
+void addEdge(Tac::BasicBlockPtr p1, Tac::BasicBlockPtr p2)
+{
+    for (auto s : p1->succs) {
+        if (s == p2)
+            return;
+    }
+
+    p1->succs.push_back(p2);
+    p2->preds.push_back(p1);
+}
+}
+
+
 Tac::Function& FuncGenerator::yieldFunc()
 {
     /// make CFG from linear code
@@ -446,8 +461,8 @@ Tac::Function& FuncGenerator::yieldFunc()
         ++iter;
 
         while (iter != quads_.end()) {
-            if (iter->op == Tac::LabelLine ||
-                enumBetween(Tac::Jmp, std::prev(iter)->op, Tac::Jleu)) {
+            if (iter->op == Tac::LabelLine
+                || enumBetween(Tac::Jmp, std::prev(iter)->op, Tac::Jleu)) {
                 currFunction_.addBasicBlock(std::move(block), afterAddBasicBlock);
                 block = Tac::BasicBlock();
             }
@@ -475,7 +490,7 @@ Tac::Function& FuncGenerator::yieldFunc()
             if (quadIter == blockIter->quads.end()) {
                 auto nextBlock = std::next(blockIter);
                 if (nextBlock != currFunction_.basicBlocks.end()) {
-                    blockIter->addEdge(nextBlock);
+                    addEdge(blockIter, nextBlock);
                     unusedBlocks.erase(nextBlock);
                 }
 
@@ -486,13 +501,13 @@ Tac::Function& FuncGenerator::yieldFunc()
                 Tac::Label target = std::get<Tac::Label>(quadIter->res.uvar);
                 auto found = labelToBlock.find(target);
                 assert(found != labelToBlock.end());
-                blockIter->addEdge(found->second);
+                addEdge(blockIter, found->second);
                 unusedBlocks.erase(found->second);
                 if (quadIter->op != Tac::Jmp) {
                     /// conditional jump; add fall through edges
                     if (auto nextBlock = std::next(blockIter);
                         nextBlock != currFunction_.basicBlocks.end()) {
-                        blockIter->addEdge(nextBlock);
+                        addEdge(blockIter, nextBlock);
                         unusedBlocks.erase(nextBlock);
                     }
                 }
@@ -506,8 +521,8 @@ Tac::Function& FuncGenerator::yieldFunc()
         }
     }
 
-    for (auto iter : unusedBlocks) {
-        currFunction_.basicBlocks.erase(iter);
+    for (auto b : unusedBlocks) {
+        currFunction_.basicBlocks.erase(b);
     }
 
 

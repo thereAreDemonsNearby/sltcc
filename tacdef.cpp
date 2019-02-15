@@ -137,7 +137,7 @@ std::string Function::toString() const
                 ret.append("\t").append(q.toString()).append("\n");
             }
         }
-        for (auto bp : b.edges) {
+        for (auto bp : b.succs) {
             ret.append("        ==> ").append(bp->quads.front().toString()).append("\n");
         }
         ret.append("        *****\n");
