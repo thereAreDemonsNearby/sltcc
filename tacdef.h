@@ -250,16 +250,24 @@ struct BasicBlock
     void addQuad(Quad&& q) { quads.push_back(std::move(q)); }
 };
 
+struct ParamInfo
+{
+    size_t size;
+    size_t align;
+    bool scalar;
+    bool ambiguous;
+};
+
 struct Function
 {
     std::string name;
-    ListSymtab* params;
+    std::vector<ParamInfo> params;
     std::shared_ptr<Type> retType;
 
     BasicBlockList basicBlocks;
 
-    explicit Function(std::string n, ListSymtab* a, std::shared_ptr<Type> ret)
-            : name(std::move(n)), params(a), retType(std::move(ret)) {}
+    explicit Function(std::string n, std::shared_ptr<Type> ret)
+            : name(std::move(n)), retType(std::move(ret)) {}
     std::string toString() const;
     void addBasicBlock(BasicBlock bb);
 

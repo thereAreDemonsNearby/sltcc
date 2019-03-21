@@ -50,10 +50,7 @@ class FuncGenerator : public Visitor
 public:
     FuncGenerator(TacGenerator& tacgen,
                   std::string funcName, ListSymtab* params,
-                  std::shared_ptr<Type> retType)
-            : tacGen_(tacgen),
-              currFunction_(std::move(funcName), params, std::move(retType))
-    {}
+                  std::shared_ptr<Type> retType);
 
     struct TempStackObjectDeallocGuard
     {

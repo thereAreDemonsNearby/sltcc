@@ -4,13 +4,13 @@
 #include <type_traits>
 
 template<typename EnumType>
-auto enumToInt(EnumType e)
+constexpr auto enumToInt(EnumType e)
 {
     return static_cast<std::underlying_type_t<EnumType>>(e);
 }
 
 template<typename EnumType>
-bool enumBetween(EnumType left, EnumType elm, EnumType right)
+constexpr bool enumBetween(EnumType left, EnumType elm, EnumType right)
 {
     return enumToInt(elm) >= enumToInt(left) && enumToInt(elm) <= enumToInt(right);
 }
@@ -25,11 +25,17 @@ struct overload : Fs...
 template<typename... Fs>
 overload(Fs...) -> overload<Fs...>;
 
-size_t alignUp(size_t v, size_t a) {
+inline size_t alignUp(size_t v, size_t a) {
     // TODO performance can be improved
     while (v % a != 0)
         ++v;
     return v;
+}
+
+template<typename T, typename... Ts>
+constexpr bool equalsAny(T const& e, Ts const&... cases)
+{
+    return ((e == cases) || ...);
 }
 
 

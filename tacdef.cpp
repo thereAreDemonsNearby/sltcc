@@ -20,27 +20,27 @@ static const char* opToString[] = {
         "LoadGlobalPtr", "LoadConstantPtr",
 };
 
-Var::Var(Reg r) : u(r)
+Var::Var(Reg r) : uvar(r)
 {
 }
 
-Var::Var(const StackObject& o) : u(o)
+Var::Var(const StackObject& o) : uvar(o)
 {
 }
 
-Var::Var(Var::ImmType imm) : u(imm)
+Var::Var(Var::ImmType imm) : uvar(imm)
 {
 }
 
-Var::Var(Label l) : u(l)
+Var::Var(Label l) : uvar(l)
 {
 }
 
-Var::Var(FuncLabel f) :  u(std::move(f))
+Var::Var(FuncLabel f) :  uvar(std::move(f))
 {
 }
 
-Var::Var(VarLabel v) : u(std::move(v))
+Var::Var(VarLabel v) : uvar(std::move(v))
 {
 
 }
@@ -129,6 +129,12 @@ std::string Function::toString() const
 {
     std::string ret{"def func "};
     ret.append(name).append("\n");
+    for (size_t i = 0; i < params.size(); ++i) {
+        ret += "("s + std::to_string(i + 1) + " " + std::to_string(params[i].size)
+                + " " + std::to_string(params[i].align) + " " + (params[i].scalar ? "s" : "c")
+                +") ";
+    }
+    ret.push_back('\n');
     for (const auto& b : basicBlocks) {
         for (const auto& q : b.quads) {
             if (q.op == LabelLine) {

@@ -517,6 +517,23 @@ Tac::Function& FuncGenerator::yieldFunc()
     return currFunction_;
 }
 
+FuncGenerator::FuncGenerator(TacGenerator& tacgen, std::string funcName, ListSymtab* params,
+                             std::shared_ptr<Type> retType)
+        : tacGen_(tacgen),
+          currFunction_(std::move(funcName), std::move(retType))
+{
+    if (!Type::isVoid(currFunction_.retType)
+        && !Type::isScalar(currFunction_.retType)) {
+        currFunction_.params.push_back(Tac::ParamInfo{PTRSIZE, PTRSIZE, true, false});
+    }
+
+    for (auto& nameEntryPair : *params) {
+        auto& type = nameEntryPair.second.type;
+        currFunction_.params.push_back({type->width(), Type::alignAt(type),
+                                        Type::isScalar(type), nameEntryPair.second.ambiguous});
+    }
+}
+
 
 void BranchGenerator::visit(BinaryOpExpr* node)
 {
@@ -1288,7 +1305,7 @@ void LValueGenerator::visit(VarExpr* node)
 {
     auto ent = currScope().find(node->varName());
     if (ent->isParam) {
-        /// 如果标量，而且没有被取地址，但是还是调用了LValueGenerator，
+        /// 如果参数是标量，而且没有被取地址，但是还是调用了LValueGenerator，
         /// 真相只有一个，那就是该变量作为赋值的左边
         /// 怕麻烦，暂时用这种愚蠢的方法解决：即强制使其进入内存
         ent->ambiguous = true;

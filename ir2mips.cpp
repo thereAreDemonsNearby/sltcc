@@ -23,10 +23,27 @@ std::size_t log2p1(std::size_t v)
 }
 
 std::string dump(Tac::StaticObject const& so);
-void convertStaticData(mips32::AsmFile& asmFile, Tac::TacIR const& ir);
-mips32::Function convertFunction(Tac::Function const&);
+void translateStaticData(mips32::AsmFile& asmFile, Tac::TacIR const& ir);
+mips32::Function translateFunction(Tac::Function const&);
 
 } // end namespace anonymous
+
+struct ParamInfo
+{
+    enum PassThrough { Register, Stack };
+    size_t size;
+    size_t align;
+    PassThrough passThrough;
+
+    /// 当passThrough等于Register时，offset表示
+    /// $a* 的寄存器编号，取值为0～3
+    /// 当passThrough等于Stack时，offset表示
+    /// 参数在内存中相对于$fp的位置，即 mem[$fp+offset]
+    /// 另外，为了 #简化实现#，在每个函数的开头，将$a0~$a3先
+    /// 保存进栈中，作为栈的地址最高处的头四个元素，从高到低分别
+    /// 是a0~a3
+    size_t offset;
+};
 
 struct StackStructure
 {
@@ -44,45 +61,50 @@ struct StackStructure
     size_t tempSize = 0;
 };
 
-class FunctionConverter
+class FunctionTranslater
 {
 private:
     Tac::Function const& tacFunc_;
     StackStructure stackStructure_;
     std::map<Tac::Reg, mips32::Reg> regBinding;
+    std::vector<ParamInfo> params;
 
     int virtualRegSeq = 0;
 
     mips32::Reg nextVirtualReg() { return mips32::Reg(mips32::Reg::Virtual, virtualRegSeq++); };
-    mips32::BasicBlock convertBasicBlock(Tac::BasicBlock const&);
-    mips32::Instruction convertInstruction(Tac::Quad const&);
+    mips32::BasicBlock translateBasicBlock(Tac::BasicBlock const&);
+    mips32::Instruction translateInstruction(Tac::Quad const&);
     void collectStackObject();
+    void decideParamPosition();
 
-    mips32::InstName genProperLoadInst(Tac::Quad const&);
-    mips32::Reg toMipsReg(Tac::Var const& r);
+    mips32::InstName properLoadInst(Tac::Quad const&);
+    mips32::InstName properArithInst(Tac::Quad const&);
+    mips32::Reg toMipsReg(Tac::Var const&);
     int32_t toInt32(Tac::Var const& v);
 public:
-    explicit FunctionConverter(Tac::Function const& tacFunc)
+    explicit FunctionTranslater(Tac::Function const& tacFunc)
         : tacFunc_(tacFunc) {}
     
-    mips32::Function convert();
+    mips32::Function translate();
 };
 
 
 mips32::AsmFile ir2mips32(Tac::TacIR const& ir)
 {
     mips32::AsmFile asmFile;
-    convertStaticData(asmFile, ir);
+    translateStaticData(asmFile, ir);
     for (auto const& irFunc : ir.funcs) {
-        asmFile.funcs.push_back(convertFunction(irFunc));
+        asmFile.funcs.push_back(translateFunction(irFunc));
     }
 
     return asmFile;
 }
 
-mips32::Function FunctionConverter::convert()
+mips32::Function FunctionTranslater::translate()
 {
+    decideParamPosition();
     collectStackObject();
+    // TODO 插入函数初始化代码
 
     mips32::Function func;
     func.name = tacFunc_.name;
@@ -90,7 +112,7 @@ mips32::Function FunctionConverter::convert()
             mips32::BasicBlockPtr> basicBlockPtrMap;
     for (Tac::ConstBasicBlockPtr irIter = tacFunc_.basicBlocks.begin();
          irIter != tacFunc_.basicBlocks.end(); ++irIter) {
-        func.basicBlocks.push_back(convertBasicBlock(*irIter));
+        func.basicBlocks.push_back(translateBasicBlock(*irIter));
         auto iter = std::prev(func.basicBlocks.end());
         basicBlockPtrMap.insert({irIter, iter});
     }
@@ -117,7 +139,7 @@ mips32::Function FunctionConverter::convert()
     return func;
 }
 
-void FunctionConverter::collectStackObject()
+void FunctionTranslater::collectStackObject()
 {
     for (auto& bb : tacFunc_.basicBlocks) {
         for (auto& quad : bb.quads) {
@@ -133,62 +155,45 @@ void FunctionConverter::collectStackObject()
     }
 }
 
-mips32::BasicBlock FunctionConverter::convertBasicBlock(Tac::BasicBlock const& irBasicBlock)
+mips32::BasicBlock FunctionTranslater::translateBasicBlock(Tac::BasicBlock const& irBasicBlock)
 {
     mips32::BasicBlock mipsBasicBlock;
 
     for (auto& irInst : irBasicBlock.quads) {
-        auto opcode = irInst.op;
-        switch (opcode) {
-        case Tac::Nop:
-            mipsBasicBlock.addInstruction({mips32::InstName::Nop, {}});
-            break;
-        case Tac::LabelLine:
-            mipsBasicBlock.addInstruction({mips32::InstName::LabelLine,
-                                           mips32::LabelInst{std::get<std::string>(irInst.opnd1.uvar)}});
-            break;
-        case Tac::Loadr:
 
-            break;
-        }
     }
 }
 
-mips32::Instruction FunctionConverter::convertInstruction(Tac::Quad const& quad)
+mips32::Instruction FunctionTranslater::translateInstruction(Tac::Quad const& quad)
 {
     int32_t offset;
-
-    // todo may be an if chain will be better
-    switch (quad.op) {
-    case Tac::Nop:
+    if (quad.op == Tac::Nop) {
         return {mips32::InstName::Nop, {}};
-
-    case Tac::LabelLine:
+    } else if (quad.op == Tac::LabelLine) {
         return {mips32::InstName::LabelLine,
-                mips32::LabelInst{std::get<std::string const>(quad.opnd1.uvar)}};
-
-    case Tac::Loadrc:
-    case Tac::Loadrcu: {
-        mips32::InstName inst = genProperLoadInst(quad);
+                mips32::LabelInst{std::get<Tac::Label>(quad.opnd1.uvar).n}};
+    } else if (equalsAny(quad.op,
+               Tac::Loadrc, Tac::Loadrcu, Tac::Loadr, Tac::Loadru)){
+        mips32::InstName inst = properLoadInst(quad);
+        int32_t off;
+        if (equalsAny(quad.op, Tac::Loadrc, Tac::Loadrcu)) {
+            off = toInt32(quad.opnd2);
+        } else {
+            off = 0;
+        }
         return {inst, mips32::LoadStoreInst{/*rt rs off*/
-                toMipsReg(quad.res), toMipsReg(quad.opnd1),
-                toInt32(quad.opnd2)}};
-    }
-
-    case Tac::Loadr:
-    case Tac::Loadru: {
-        mips32::InstName inst = genProperLoadInst(quad);
-        return {inst, mips32::LoadStoreInst{/*rt rs off*/
-                            toMipsReg(quad.res), toMipsReg(quad.opnd1), 0}};
-    }
-
-    case Tac::Loadi:
-    case Tac::Loadiu:
+                toMipsReg(quad.res), toMipsReg(quad.opnd1), off}};
+    } else if (equalsAny(quad.op, Tac::Loadi, Tac::Loadiu)) {
         return {mips32::InstName::Li, mips32::LuiLiInst{
-            toMipsReg(quad.res),
-            toInt32(quad.opnd1)}};
-
-    case Tac::Storerc: {
+                toMipsReg(quad.res),
+                toInt32(quad.opnd1)}};
+    } else if (equalsAny(quad.op, Tac::Storer, Tac::Storerc)) {
+        int32_t off;
+        if (quad.op == Tac::Storerc) {
+            off = toInt32(quad.opnd2);
+        } else {
+            off = 0;
+        }
         mips32::InstName inst;
         switch (quad.width) {
         case 1:
@@ -204,38 +209,37 @@ mips32::Instruction FunctionConverter::convertInstruction(Tac::Quad const& quad)
             assert(false);
         }
 
-        return {
-                inst, mips32::LoadStoreInst{toMipsReg(quad.res),
-                                            toMipsReg(quad.opnd1),
-                                            toInt32(quad.opnd2)}
-        };
-    }
-
-    case Tac::Storer: {
-        mips32::InstName inst;
-        switch (quad.width) {
-        case 1: inst = mips32::InstName::Sb; break;
-        case 2: inst = mips32::InstName::Sh; break;
-        case 4: inst = mips32::InstName::Sw; break;
-        default: assert(false);
+        return {inst, mips32::LoadStoreInst{
+                    toMipsReg(quad.res), toMipsReg(quad.opnd1), off}};
+    } else if (enumBetween(Tac::Add, quad.op, Tac::BXor)) {
+        /// only addu/div/divu may have a imm or reg for opnd2
+        /// or and xor: ori andi xori
+        auto inst = properArithInst(quad);
+        if (std::holds_alternative<Tac::Reg>(quad.opnd2.uvar)) {
+            return {inst, mips32::ArithInst{
+                toMipsReg(quad.res), toMipsReg(quad.opnd1), toMipsReg(quad.opnd2)}
+            };
+        } else {
+            assert(std::holds_alternative<Tac::Var::ImmType>(quad.opnd2.uvar));
+            return {inst, mips32::ArithInst_Imm{
+                toMipsReg(quad.res), toMipsReg(quad.opnd1), toInt32(quad.opnd2)
+            }};
         }
-
-        return {
-                inst, mips32::LoadStoreInst{toMipsReg(quad.res),
-                                            toMipsReg(quad.opnd1),
-                                            0}
-        };
-    }
-
-    case Tac::Add:
-    case Tac::Sub:
-
-    }
-
+    } else if (quad.op == Tac::BInv) {
+        return {mips32::InstName::Not, mips32::ArithInst{
+            toMipsReg(quad.res), toMipsReg(quad.opnd1), mips32::Reg{mips32::Reg::Invalid}
+        }};
+    } else if (quad.op == Tac::Movrr) {
+        return {mips32::InstName::Move, mips32::ArithInst{
+                toMipsReg(quad.res), toMipsReg(quad.opnd1), mips32::Reg{mips32::Reg::Invalid}
+        }};
+    } else if (equalsAny(quad.op, Tac::Extu, Tac::Exts)) {
+        /// will be translated to multiple mips instructions
+    } // TODO
 
 }
 
-mips32::InstName FunctionConverter::genProperLoadInst(Tac::Quad const& quad)
+mips32::InstName FunctionTranslater::properLoadInst(Tac::Quad const& quad)
 {
     if (quad.width == 4)
         return mips32::InstName::Lw;
@@ -261,7 +265,7 @@ mips32::InstName FunctionConverter::genProperLoadInst(Tac::Quad const& quad)
     }
 }
 
-mips32::Reg FunctionConverter::toMipsReg(Tac::Var const& v)
+mips32::Reg FunctionTranslater::toMipsReg(Tac::Var const& v)
 {
     Tac::Reg tr = std::get<Tac::Reg>(v.uvar);
 
@@ -275,9 +279,52 @@ mips32::Reg FunctionConverter::toMipsReg(Tac::Var const& v)
     }
 }
 
-int32_t FunctionConverter::toInt32(Tac::Var const& v)
+int32_t FunctionTranslater::toInt32(Tac::Var const& v)
 {
     return static_cast<int32_t>(std::get<Tac::Var::ImmType>(v.uvar).val);
+}
+
+mips32::InstName FunctionTranslater::properArithInst(Tac::Quad const& quad)
+{
+    using namespace mips32;
+    static std::map<Tac::Opcode, mips32::InstName> map = {
+            {Tac::Add, InstName::Addu}, {Tac::Sub, InstName::Subu}, {Tac::Mul, InstName::Mul},
+            {Tac::Divu, InstName::Divu}, {Tac::Divs, InstName::Div}, {Tac::Modu, InstName::Remu},
+            {Tac::Mods, InstName::Rem}, {Tac::Shl, InstName::Sllv}, {Tac::Shra, InstName::Srav},
+            {Tac::Shrl, InstName::Srlv}, {Tac::BAnd, InstName::And}, {Tac::BOr, InstName::Or},
+            {Tac::BXor, InstName::Xor},
+    };
+
+    auto iter = map.find(quad.op);
+    assert(iter != map.end());
+    auto inst = iter->second;
+    if (equalsAny(inst, InstName::And, InstName::Or, InstName::Xor)) {
+        if (std::holds_alternative<Tac::Var::ImmType>(quad.opnd2.uvar)) {
+            switch (inst) {
+            case InstName::And: return InstName::Andi;
+            case InstName::Or: return InstName::Ori;
+            case InstName::Xor: return InstName::Xori;
+            default: assert(false);
+            }
+        }
+    }
+    return inst;
+}
+
+void FunctionTranslater::decideParamPosition()
+{
+    size_t stackOffset = 0; // relative to $fp
+    size_t aIndex = 0; // index of $a
+    for (Tac::ParamInfo const& pi : tacFunc_.params) {
+        if (pi.scalar && pi.size <= PTRSIZE && aIndex <= 3) {
+            // size align passThrough offset
+            params.emplace_back(pi.size, pi.align, ParamInfo::Register, aIndex++);
+        } else {
+            stackOffset = alignUp(stackOffset, pi.align);
+            params.emplace_back(pi.size, pi.align, ParamInfo::Stack, stackOffset);
+            stackOffset += pi.size;
+        }
+    }
 }
 
 namespace
@@ -321,7 +368,7 @@ std::string dump(Tac::StaticObject const& so)
 
 
 
-void convertStaticData(mips32::AsmFile& asmFile, Tac::TacIR const& ir)
+void translateStaticData(mips32::AsmFile& asmFile, Tac::TacIR const& ir)
 {
     for (auto const& pair : ir.globalVars) {
         asmFile.staticData.append("\t.data\n")
@@ -344,10 +391,10 @@ void convertStaticData(mips32::AsmFile& asmFile, Tac::TacIR const& ir)
     }
 }
 
-mips32::Function convertFunction(Tac::Function const& irFunc)
+mips32::Function translateFunction(Tac::Function const& irFunc)
 {
-    FunctionConverter converter(irFunc);
-    return converter.convert();
+    FunctionTranslater translater(irFunc);
+    return translater.translate();
 }
 
 

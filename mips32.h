@@ -53,7 +53,7 @@ enum class InstName {
 struct Reg
 {
     enum Tag {
-        Virtual, LiveRange,
+        Invalid, Virtual, LiveRange,
         GP, SP, FP, S /** s0 ~ s7 , callee saved  */, T /** t0 ~ t9 , caller saved */,
         A /** a0 ~ a3 , arguments */, RA /** return address */,
     };
@@ -66,7 +66,7 @@ struct Reg
 
 struct LabelInst
 {
-    std::string label;
+    int n;
 };
 
 /// include move, not
@@ -147,8 +147,6 @@ struct BasicBlock
     void addInstruction(Instruction const& inst) { instructions.push_back(inst); }
     void addInstruction(Instruction&& inst) { instructions.push_back(inst); }
 };
-
-
 
 struct Function
 {

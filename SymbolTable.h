@@ -13,16 +13,6 @@
 class Type;
 class Token;
 
-struct ParameterInfo
-{
-    int seq;
-};
-
-struct DataMemberInfo
-{
-    size_t offset;
-};
-
 struct SymtabEntry
 {
     std::string const* pname;
