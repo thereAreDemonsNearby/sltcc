@@ -3,18 +3,6 @@
 #include <set>
 #include "utils.h"
 
-namespace std
-{
-template<>
-struct hash<Tac::BasicBlockPtr>
-{
-    size_t operator()(Tac::BasicBlockPtr p) const
-    {
-        return std::hash<decltype(&(*p))>()(&(*p));
-    }
-};
-}
-
 namespace
 {
 /// 传入一个有符号版本，然后撅定用有符号还是无符号版本
@@ -1229,7 +1217,7 @@ void ValueGenerator::visit(FuncCallExpr* node)
         /// and let addr be the first parameter
         auto stackMem = nextStackObject(compoundTy->width(), compoundTy->alignAt());
         pushTempStackObject(stackMem);
-        emit({Tac::Alloca, stackMem, Tac::Var::empty, reg_});
+        emit({Tac::AllocaTemp, stackMem, Tac::Var::empty, reg_});
         args.push_back(Tac::ArgInfo{reg_, Tac::ArgInfo::Value, PTRSIZE, PTRSIZE, true});
     }
 

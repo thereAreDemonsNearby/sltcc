@@ -3,17 +3,7 @@
 #include <algorithm>
 #include <numeric>
 #include "platform.h"
-
-namespace {
-
-size_t alignUp(size_t v, size_t a) {
-    // TODO to be improved
-    while (v % a != 0)
-        ++v;
-    return v;
-}
-
-}
+#include "utils.h"
 
 Type::Type(Tag t, QualifierHolder qh)
     : tag_(t), qualifiers_(qh)
@@ -218,7 +208,7 @@ std::string BuiltInType::toString() const
     case Void: ret += "void"; break;
     case Integer:
         if (isUnsigned())
-            ret += "u";
+            ret += "uvar";
         ret += "i";
         ret += std::to_string(width());
         break;

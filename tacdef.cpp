@@ -16,31 +16,31 @@ static const char* opToString[] = {
         "BOr", "BXor", "BInv", "Movrr", "Extu", "Exts", "Jmp",
         "Jeq", "Jne", "Jgs", "Jges", "Jls", "Jles", "Jgu",
         "Jgeu", "Jlu", "Jleu", "Call", "Ret", "LoadVarPtr", "Memcpy",
-        "GetParamVal", "GetParamPtr", "Alloca", "Dealloca",
+        "GetParamVal", "GetParamPtr", "Alloca", "AllocaTemp", "Dealloca",
         "LoadGlobalPtr", "LoadConstantPtr",
 };
 
-Var::Var(Reg r) : uvar(r)
+Var::Var(Reg r) : u(r)
 {
 }
 
-Var::Var(const StackObject& o) : uvar(o)
+Var::Var(const StackObject& o) : u(o)
 {
 }
 
-Var::Var(Var::ImmType imm) : uvar(imm)
+Var::Var(Var::ImmType imm) : u(imm)
 {
 }
 
-Var::Var(Label l) : uvar(l)
+Var::Var(Label l) : u(l)
 {
 }
 
-Var::Var(FuncLabel f) :  uvar(std::move(f))
+Var::Var(FuncLabel f) :  u(std::move(f))
 {
 }
 
-Var::Var(VarLabel v) : uvar(std::move(v))
+Var::Var(VarLabel v) : u(std::move(v))
 {
 
 }
@@ -168,6 +168,10 @@ std::string stringifyBinData(StaticObject::BinData const& d)
 
         std::string operator()(int64_t i) {
             return "B8 "s + std::to_string(i);
+        }
+
+        std::string operator()(double d) {
+            return "double "s + std::to_string(d);
         }
 
         std::string operator()(StaticObject::Padding p) {

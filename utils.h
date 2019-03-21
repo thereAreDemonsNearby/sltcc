@@ -15,5 +15,22 @@ bool enumBetween(EnumType left, EnumType elm, EnumType right)
     return enumToInt(elm) >= enumToInt(left) && enumToInt(elm) <= enumToInt(right);
 }
 
+template<typename... Fs>
+struct overload : Fs...
+{
+    using Fs::operator()...;
+    explicit overload(Fs&&... fs) : Fs(std::forward<Fs>(fs))... {}
+};
+
+template<typename... Fs>
+overload(Fs...) -> overload<Fs...>;
+
+size_t alignUp(size_t v, size_t a) {
+    // TODO performance can be improved
+    while (v % a != 0)
+        ++v;
+    return v;
+}
+
 
 #endif //UTILS_H

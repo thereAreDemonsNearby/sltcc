@@ -442,7 +442,7 @@ auto TokenStream::lexNumberSuffix(StrIter& it, StrIter end, std::string& lexeme,
         if (it != end) {
             if (tolower(*it) == 'u') {
 #ifdef MULTIPLE_LITERAL
-                lexeme.push_back(*it); //u
+                lexeme.push_back(*it); //uvar
 #endif
 				++it;
                 if (it != end && tolower(*it) == 'l') {
@@ -453,7 +453,7 @@ auto TokenStream::lexNumberSuffix(StrIter& it, StrIter end, std::string& lexeme,
                     if (it != end && tolower(*it) == 'l') {
                         // unsigned long long
 #ifdef MULTIPLE_LITERAL
-						lexeme.push_back(*it); //u
+						lexeme.push_back(*it); //uvar
 #endif
 						++it;
                         return NumCat::ULL;

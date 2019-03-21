@@ -11,6 +11,7 @@
 #include <unordered_set>
 #include <cinttypes>
 #include <type_traits>
+#include <functional>
 #include "platform.h"
 
 struct SymtabEntry;
@@ -26,6 +27,7 @@ enum Opcode
     Nop,
     LabelLine, /** LabelLine <label> */
     Loadr /** load value. The address is specified by a register.*/,
+          /// Loadr <base register> <offset> <aim register>
     Loadrc /** load value. The address is specified by a register and an offset */,
     Loadi /** load an immidiate number */,
     Loadru, Loadrcu, Loadiu,
@@ -47,7 +49,9 @@ enum Opcode
     GetParamVal, /// maybe from memory!!! should not be optimized out
     GetParamPtr, /// GetParam* num empty reg
 
-    Alloca, /// Alloca <StackObject> <empty> <reg(save the address)> allocate memory on stack
+    Alloca, /// Alloca <StackObject> allocate memory on stack
+    AllocaTemp, /// AllocaTemp <StackObject> <empty> <reg(save the address)>
+                /// same as Alloca, except the allocated object will be 'Dealloca'ed later
     Dealloca, /// Dealloca <StackObject>
 
     LoadGlobalPtr, /// LoadGlobalPtr <string>
@@ -56,13 +60,14 @@ enum Opcode
 
 struct Reg
 {
-    int n; /// exclusive for a particular function
+    int n; /// exclusive in a particular function
     explicit Reg(int r = -1) : n(r)
     {}
 
     std::string toString() const;
 
     bool operator==(Reg rhs) const;
+    bool operator<(Reg rhs) const { return n < rhs.n; }
 };
 
 struct Label
@@ -113,7 +118,8 @@ struct StaticObject
     /// use a unique sequence number as their id
 
 
-    using BinData = std::variant<int8_t, int16_t, int32_t, int64_t, Padding>; /// bin data like .word .half
+    /// bin data like .word .half
+    using BinData = std::variant<int8_t, int16_t, int32_t, int64_t, double, Padding>;
     using DataType = std::variant<std::monostate,
                                   std::string, /// character data, null terminated ascii
                                   std::vector<BinData>// bin data
@@ -232,6 +238,8 @@ struct BasicBlock;
 
 using BasicBlockList = std::list<BasicBlock>;
 using BasicBlockPtr = BasicBlockList::iterator;
+using ConstBasicBlockPtr = BasicBlockList::const_iterator;
+
 
 struct BasicBlock
 {
@@ -268,7 +276,7 @@ struct TacIR
 {
     std::vector<std::pair<std::string, StaticObject>> globalVars;
     std::vector<StaticObject> literalPool; /// named by seq num
-    std::vector<Function> funcs;
+    std::list<Function> funcs;
     std::string toString() const;
 
     void addGlobalVar(const std::string& name, const StaticObject& so);
@@ -277,5 +285,28 @@ struct TacIR
 };
 
 } // end namespace tac
+
+namespace std
+{
+
+template<>
+struct hash<Tac::BasicBlockPtr>
+{
+    size_t operator()(Tac::BasicBlockPtr p) const
+    {
+        return std::hash<decltype(&(*p))>()(&(*p));
+    }
+};
+
+template<>
+struct hash<Tac::ConstBasicBlockPtr>
+{
+    size_t operator()(Tac::ConstBasicBlockPtr p) const
+    {
+        return std::hash<decltype(&(*p))>()(&(*p));
+    }
+};
+
+} // end namespace std
 
 #endif //TACDEF_H__

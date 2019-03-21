@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <list>
+#include <cassert>
 
 namespace Tac
 {
@@ -17,7 +18,7 @@ namespace mips32
 /// actually designed for spim
 enum class InstName {
     Nop, LabelLine,
-    /// all arithmetic instructions are without overflow
+    /// all arithmetic instructions ignore overflow
     Addu, /// pseudo inst. addu rdest rsrc1 src2
     Subu, /// subu rd rs rt
     Mul, /// mul rd rs rt
@@ -48,71 +49,65 @@ enum class InstName {
     Phi, /// for SSA
 };
 
-/// Virtual register used before register allocation
-struct VReg
-{
-    int n; /// virtual register number
-    int v; /// version number. used in SSA form
-
-    explicit VReg(int n_) : n(n_), v(0) {}
-};
-
-struct LiveRange
-{
-    int n;
-};
 
 struct Reg
 {
     enum Tag {
+        Virtual, LiveRange,
         GP, SP, FP, S /** s0 ~ s7 , callee saved  */, T /** t0 ~ t9 , caller saved */,
         A /** a0 ~ a3 , arguments */, RA /** return address */,
     };
     Tag tag;
     int n;
-
-    explicit Reg(Tag t, int number = 0) : tag(t), n(number) {}
+    int v; /// version, used in SSA form
+    explicit Reg(Tag t, int number = 0) : tag(t), n(number), v(0) {}
 };
-
-using Var = std::variant<std::monostate, VReg, LiveRange, Reg, int32_t>;
 
 
 struct LabelInst
 {
     std::string label;
 };
-/// include move
+
+/// include move, not
 struct ArithInst
 {
-    Var rdest;
-    Var rsrc1;
-    Var src2; /// maybe register, imm or empty
+    Reg rdest;
+    Reg rsrc1;
+    Reg rsrc2;
+};
+
+struct ArithInst_Imm
+{
+    Reg rdest;
+    Reg rsrc1;
+    int32_t src2;
 };
 
 struct LaInst
 {
-    Var rdest;
+    Reg rdest;
     std::string label;
 };
 
 struct LoadStoreInst
 {
-    Var rt;
-    Var rs;
+    Reg rt;
+    Reg rs;
     int32_t offset;
 };
 
 struct LuiLiInst
 {
-    Var rdest;
+    Reg rdest;
     int32_t imm;
 };
 
 /// beq, bne, b*...
 struct BranchInst
 {
-    Var rs;
-    Var rt;
+    Reg rs;
+    Reg rt;
     std::string label;
 };
 
@@ -124,12 +119,13 @@ struct JumpInst
 
 struct PhiInst
 {
-    std::vector<VReg> args;
+    std::vector<Reg> args;
 };
 
 using InstBody = std::variant<std::monostate, /** for 'nop' */
                               LabelInst,
                               ArithInst,
+                              ArithInst_Imm,
                               LaInst, LoadStoreInst, LuiLiInst,
                               BranchInst, JumpInst>;
 
@@ -147,18 +143,23 @@ struct BasicBlock
     std::list<Instruction> instructions;
     std::vector<BasicBlockPtr> succs;
     std::vector<BasicBlockPtr> preds;
+
+    void addInstruction(Instruction const& inst) { instructions.push_back(inst); }
+    void addInstruction(Instruction&& inst) { instructions.push_back(inst); }
 };
+
+
 
 struct Function
 {
-    std::string funcName;
+    std::string name;
     std::list<BasicBlock> basicBlocks;
 };
 
 struct AsmFile
 {
     std::string staticData; /// directly
-    std::vector<Function> funcs;
+    std::list<Function> funcs;
 };
 
 } // namespace mips32
