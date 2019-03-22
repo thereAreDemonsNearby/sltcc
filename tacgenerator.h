@@ -55,7 +55,7 @@ public:
     struct TempStackObjectDeallocGuard
     {
         FuncGenerator& fg_;
-        TempStackObjectDeallocGuard(FuncGenerator& fg) : fg_(fg) {
+        explicit TempStackObjectDeallocGuard(FuncGenerator& fg) : fg_(fg) {
             assert(fg_.tempStackObjects_.empty());
         }
 

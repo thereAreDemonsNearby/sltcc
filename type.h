@@ -63,6 +63,7 @@ public:
     }
 
     static bool isInteger(const std::shared_ptr<Type>& ty);
+    static bool isUnsignedInteger(const std::shared_ptr<Type>& ty);
 	static bool isFloating(const std::shared_ptr<Type>& ty);
     static bool isVoid(const std::shared_ptr<Type>& ty);
     static bool isArithmetic(const std::shared_ptr<Type>& ty);

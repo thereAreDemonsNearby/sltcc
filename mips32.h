@@ -44,7 +44,7 @@ enum class InstName {
     Li, /// pseudo inst, li rdest, imm
 
     Beq, Bne, Bge, Bgeu, Bgt, Bgtu, Ble, Bleu, Blt, Bltu, /// beq rs rt label
-    J, /** j label */ Jal, /** jal label(function) */
+    J, /** j label */ Jal, /** jal label(function) */ Jr, /** jr $ra */
 
     Phi, /// for SSA
 };
@@ -56,6 +56,7 @@ struct Reg
         Invalid, Virtual, LiveRange,
         GP, SP, FP, S /** s0 ~ s7 , callee saved  */, T /** t0 ~ t9 , caller saved */,
         A /** a0 ~ a3 , arguments */, RA /** return address */,
+        V, /** v0~v1 return value*/
     };
     Tag tag;
     int n;
@@ -66,7 +67,7 @@ struct Reg
 
 struct LabelInst
 {
-    int n;
+    std::string label;
 };
 
 /// include move, not
@@ -117,6 +118,11 @@ struct JumpInst
     std::string label;
 };
 
+struct JrInst
+{
+    Reg reg;
+};
+
 struct PhiInst
 {
     std::vector<Reg> args;
@@ -127,7 +133,7 @@ using InstBody = std::variant<std::monostate, /** for 'nop' */
                               ArithInst,
                               ArithInst_Imm,
                               LaInst, LoadStoreInst, LuiLiInst,
-                              BranchInst, JumpInst>;
+                              BranchInst, JumpInst, JrInst>;
 
 struct Instruction
 {

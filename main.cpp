@@ -481,7 +481,7 @@ void testTacGen()
     printTacGen("struct S { char a; int b; }; S* prevPtr(S* p, int n) { return p - n; }");
      */
 
-    printTacGen("int max(int a, int b) {"
+    printTacGen("int max(unsigned int a, int b) {"
                 "  if (a > b) { return a; }"
                 "  else { return b; }"
                 "}");
@@ -689,6 +689,14 @@ void testTacGen()
                 "  int a = 10;"
                 "  unsigned b = (unsigned)a;"
                 "  unsigned c = b + 100;"
+                "}");
+    printTacGen("int sum() {"
+                "  int i = 0;"
+                "  int sum = 0;"
+                "  do {"
+                "    sum = sum + i;"
+                "    i = i + 1;"
+                "  } while (i < 100);"
                 "}");
 }
 

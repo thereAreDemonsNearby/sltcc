@@ -166,6 +166,7 @@ void FuncGenerator::visit(ForStmt* node)
 void FuncGenerator::visit(DoWhileStmt* node)
 {
     auto beginLabel = nextLabel();
+    emit({Tac::LabelLine, beginLabel});
     BranchGenerator bg(*this, true, beginLabel);
     node->body_->accept(*this);
     node->cond_->accept(bg);
@@ -530,7 +531,9 @@ FuncGenerator::FuncGenerator(TacGenerator& tacgen, std::string funcName, ListSym
     for (auto& nameEntryPair : *params) {
         auto& type = nameEntryPair.second.type;
         currFunction_.params.push_back({type->width(), Type::alignAt(type),
-                                        Type::isScalar(type), nameEntryPair.second.ambiguous});
+                                        Type::isScalar(type),
+                                        nameEntryPair.second.ambiguous,
+                                        Type::isUnsignedInteger(type)});
     }
 }
 

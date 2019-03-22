@@ -37,25 +37,26 @@ enum Opcode
     Shl, Shrl, Shra, BAnd, BOr, BXor, BInv,
     Movrr, /// copy between reigisters
     Extu, Exts, /// 扩展指令表示将一定长度（由指令的width字段指出）的半字或字节扩展到字长
-    Jmp, /** Jmp <> <> <dest> */Jeq, Jne, Jgs, Jges, Jls, Jles,
+    Jmp, /** Jmp <> <> <dest> */
+    Jeq, Jne, Jgs, Jges, Jls, Jles,
     Jgu, Jgeu, Jlu, Jleu,
     Call, /** call <funcent> <empty> <reg(return value)> */
-    Ret, /** return a value in register : retval %r1*/
+    Ret, /** return a value in register : ret <reg(optional)>*/
     LoadVarPtr, /// LoadVarPtr <StackObject> <empty> <reg>
     Memcpy, /// Memcpy <rhsAddr> <size> <lhsAddr>
 
     /** 用于从函数体内获得参数的值或地址 */
     /** num 算上返回值变成的参数 */
     GetParamVal, /// maybe from memory!!! should not be optimized out
-    GetParamPtr, /// GetParam* num empty reg
+    GetParamPtr, /// GetParam* <num> <empty> <reg>
 
     Alloca, /// Alloca <StackObject> allocate memory on stack
     AllocaTemp, /// AllocaTemp <StackObject> <empty> <reg(save the address)>
                 /// same as Alloca, except the allocated object will be 'Dealloca'ed later
     Dealloca, /// Dealloca <StackObject>
 
-    LoadGlobalPtr, /// LoadGlobalPtr <string>
-    LoadConstantPtr, /// LoadConstantPtr <seq number>
+    LoadGlobalPtr, /// LoadGlobalPtr <string> <> <reg>
+    LoadConstantPtr, /// LoadConstantPtr <seq number> <> <reg>
 };
 
 struct Reg
@@ -256,6 +257,7 @@ struct ParamInfo
     size_t align;
     bool scalar;
     bool ambiguous;
+    bool isUnsigned; // true if this param is an unsigned integer
 };
 
 struct Function

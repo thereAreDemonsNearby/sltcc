@@ -12,14 +12,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="abeb9b3f-1a88-424a-9a97-52ea3afe4315" name="Default" comment="">
-      <change beforePath="$PROJECT_DIR$/SymbolTable.h" beforeDir="false" afterPath="$PROJECT_DIR$/SymbolTable.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ir2mips.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/ir2mips.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/main.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mips32.h" beforeDir="false" afterPath="$PROJECT_DIR$/mips32.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tacdef.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/tacdef.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tacdef.h" beforeDir="false" afterPath="$PROJECT_DIR$/tacdef.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tacgenerator.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/tacgenerator.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tacgenerator.h" beforeDir="false" afterPath="$PROJECT_DIR$/tacgenerator.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils.h" beforeDir="false" afterPath="$PROJECT_DIR$/utils.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/type.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/type.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/type.h" beforeDir="false" afterPath="$PROJECT_DIR$/type.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -34,8 +36,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/tacdef.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="64">
-              <caret line="132" column="42" selection-start-line="132" selection-start-column="42" selection-end-line="132" selection-end-column="42" />
+            <state relative-caret-position="118">
+              <caret line="134" column="51" selection-start-line="134" selection-start-column="51" selection-end-line="134" selection-end-column="51" />
               <folding>
                 <element signature="e#0#19#0" expanded="true" />
               </folding>
@@ -46,31 +48,19 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/main.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-290">
-              <caret line="672" column="28" selection-start-line="672" selection-start-column="28" selection-end-line="672" selection-end-column="28" />
+            <state relative-caret-position="148">
+              <caret line="483" column="34" selection-start-line="483" selection-start-column="34" selection-end-line="483" selection-end-column="34" />
             </state>
           </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/tacdef.h">
+        <entry file="file://$PROJECT_DIR$/tacgenerator.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="16">
-              <caret line="257" column="19" selection-start-line="257" selection-start-column="19" selection-end-line="257" selection-end-column="19" />
+            <state relative-caret-position="-689">
+              <caret line="78" column="12" selection-start-line="78" selection-start-column="12" selection-end-line="78" selection-end-column="12" />
               <folding>
-                <element signature="e#40#58#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/tacgenerator.cpp">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="268">
-              <caret line="532" column="94" selection-start-line="532" selection-start-column="94" selection-end-line="532" selection-end-column="94" />
-              <folding>
-                <element signature="e#0#25#0" expanded="true" />
+                <element signature="e#51#71#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -88,10 +78,22 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/mips32.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="53">
-              <caret line="148" column="2" selection-start-line="148" selection-start-column="2" selection-end-line="148" selection-end-column="2" />
+            <state relative-caret-position="2219">
+              <caret line="135" column="58" selection-start-line="135" selection-start-column="58" selection-end-line="135" selection-end-column="58" />
               <folding>
                 <element signature="e#35#53#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/tacdef.h">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="82">
+              <caret line="57" column="13" lean-forward="true" selection-start-line="57" selection-start-column="13" selection-end-line="57" selection-end-column="13" />
+              <folding>
+                <element signature="e#40#58#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -100,10 +102,16 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/ir2mips.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="286">
-              <caret line="326" column="5" lean-forward="true" selection-start-line="326" selection-start-column="5" selection-end-line="326" selection-end-column="5" />
+            <state relative-caret-position="72">
+              <caret line="469" column="35" selection-start-line="469" selection-start-column="35" selection-end-line="469" selection-end-column="35" />
               <folding>
                 <element signature="e#0#18#0" expanded="true" />
+                <element signature="e#1846#1862#0" expanded="true" />
+                <element signature="e#2281#2300#0" expanded="true" />
+                <element signature="e#2383#2402#0" expanded="true" />
+                <element signature="e#5016#5039#0" expanded="true" />
+                <element signature="e#16506#16525#0" expanded="true" />
+                <element signature="e#16627#16646#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -113,9 +121,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>Add</find>
-      <find>Tac::Add</find>
-      <find>vardef</find>
       <find>name_</find>
       <find>Assign</find>
       <find>Binar</find>
@@ -138,11 +143,14 @@
       <find>J</find>
       <find>Var</find>
       <find>LabelLine</find>
-      <find>AllocaTemp</find>
       <find>Loadi</find>
       <find>Sub</find>
       <find>convert</find>
       <find>GetParam</find>
+      <find>Ret</find>
+      <find>Func</find>
+      <find>Tac::Ret</find>
+      <find>AllocaTemp</find>
     </findStrings>
     <replaceStrings>
       <replace>implicitCond(vg.value(), node-&gt;evalType)</replace>
@@ -163,7 +171,6 @@
         <option value="$PROJECT_DIR$/typechecker.h" />
         <option value="$PROJECT_DIR$/lex.h" />
         <option value="$PROJECT_DIR$/platform.h" />
-        <option value="$PROJECT_DIR$/type.h" />
         <option value="$PROJECT_DIR$/lex.cpp" />
         <option value="$PROJECT_DIR$/token.h" />
         <option value="$PROJECT_DIR$/token.cpp" />
@@ -174,18 +181,19 @@
         <option value="$PROJECT_DIR$/error.cpp" />
         <option value="$PROJECT_DIR$/parser.h" />
         <option value="$PROJECT_DIR$/parser.cpp" />
-        <option value="$PROJECT_DIR$/main.cpp" />
         <option value="$PROJECT_DIR$/mips32.cpp" />
         <option value="$PROJECT_DIR$/ir2mips.h" />
         <option value="$PROJECT_DIR$/Array2D.h" />
-        <option value="$PROJECT_DIR$/type.cpp" />
-        <option value="$PROJECT_DIR$/tacgenerator.h" />
         <option value="$PROJECT_DIR$/SymbolTable.h" />
         <option value="$PROJECT_DIR$/utils.h" />
-        <option value="$PROJECT_DIR$/tacdef.cpp" />
-        <option value="$PROJECT_DIR$/tacdef.h" />
-        <option value="$PROJECT_DIR$/tacgenerator.cpp" />
         <option value="$PROJECT_DIR$/mips32.h" />
+        <option value="$PROJECT_DIR$/tacgenerator.h" />
+        <option value="$PROJECT_DIR$/type.h" />
+        <option value="$PROJECT_DIR$/type.cpp" />
+        <option value="$PROJECT_DIR$/tacgenerator.cpp" />
+        <option value="$PROJECT_DIR$/tacdef.cpp" />
+        <option value="$PROJECT_DIR$/main.cpp" />
+        <option value="$PROJECT_DIR$/tacdef.h" />
         <option value="$PROJECT_DIR$/ir2mips.cpp" />
       </list>
     </option>
@@ -218,6 +226,7 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -229,7 +238,6 @@
           <select />
         </subPane>
       </pane>
-      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -334,11 +342,12 @@
       <workItem from="1552186767105" duration="7324000" />
       <workItem from="1553064948664" duration="19099000" />
       <workItem from="1553154303284" duration="15325000" />
+      <workItem from="1553223541721" duration="13723000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="366503000" />
+    <option name="totallyTimeSpent" value="380226000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -352,17 +361,17 @@
   <component name="ToolWindowManager">
     <frame x="0" y="27" width="1366" height="741" extended-state="6" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.19359756" />
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.14634146" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
-      <window_info anchor="bottom" id="Find" order="1" weight="0.13752122" />
+      <window_info active="true" anchor="bottom" id="Find" order="1" visible="true" weight="0.24957556" />
       <window_info anchor="bottom" id="Run" order="2" weight="0.07470289" />
-      <window_info anchor="bottom" id="Debug" order="3" weight="0.1646859" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.14940578" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
       <window_info anchor="bottom" id="TODO" order="6" weight="0.105960265" />
-      <window_info anchor="bottom" id="Messages" order="7" weight="0.41426146" />
+      <window_info anchor="bottom" id="Messages" order="7" weight="0.39558575" />
       <window_info anchor="bottom" id="Database Changes" order="8" />
       <window_info anchor="bottom" id="Terminal" order="9" weight="0.3293718" />
       <window_info anchor="bottom" id="Event Log" order="10" side_tool="true" />
@@ -374,29 +383,6 @@
       <window_info anchor="right" id="Database" order="3" />
       <window_info anchor="right" id="Data View" order="4" />
     </layout>
-    <layout-to-restore>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.19435975" />
-      <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
-      <window_info id="Favorites" order="2" side_tool="true" />
-      <window_info anchor="bottom" id="Message" order="0" />
-      <window_info active="true" anchor="bottom" id="Find" order="1" visible="true" weight="0.22750424" />
-      <window_info anchor="bottom" id="Run" order="2" weight="0.07470289" />
-      <window_info anchor="bottom" id="Debug" order="3" weight="0.1901528" />
-      <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
-      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
-      <window_info anchor="bottom" id="TODO" order="6" weight="0.105960265" />
-      <window_info anchor="bottom" id="Messages" order="7" weight="0.54159594" />
-      <window_info anchor="bottom" id="Database Changes" order="8" />
-      <window_info anchor="bottom" id="Terminal" order="9" weight="0.3293718" />
-      <window_info anchor="bottom" id="Event Log" order="10" side_tool="true" />
-      <window_info anchor="bottom" id="Version Control" order="11" weight="0.3294702" />
-      <window_info anchor="bottom" id="CMake" order="12" />
-      <window_info anchor="right" id="Commander" order="0" weight="0.4" />
-      <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
-      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
-      <window_info anchor="right" id="Database" order="3" />
-      <window_info anchor="right" id="Data View" order="4" />
-    </layout-to-restore>
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="1" />
@@ -580,46 +566,12 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/ir2mips.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="270">
-          <caret line="15" column="22" selection-start-line="15" selection-start-column="22" selection-end-line="15" selection-end-column="22" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/type.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="356">
-          <caret line="73" column="24" selection-start-line="73" selection-start-column="24" selection-end-line="73" selection-end-column="24" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/tacgenerator.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="22">
-          <caret line="241" column="57" selection-start-line="241" selection-start-column="57" selection-end-line="241" selection-end-column="57" />
-          <folding>
-            <element signature="e#51#71#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/utils.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="149">
           <caret line="27" column="7" selection-start-line="27" selection-start-column="7" selection-end-line="27" selection-end-column="7" />
           <folding>
             <element signature="e#65#84#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/type.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="96">
-          <caret line="48" selection-start-line="48" selection-end-line="48" />
-          <folding>
-            <element signature="e#0#17#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -634,59 +586,99 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/ir2mips.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="270">
+          <caret line="15" column="22" selection-start-line="15" selection-start-column="22" selection-end-line="15" selection-end-column="22" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/tacgenerator.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-689">
+          <caret line="78" column="12" selection-start-line="78" selection-start-column="12" selection-end-line="78" selection-end-column="12" />
+          <folding>
+            <element signature="e#51#71#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/tacdef.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="64">
-          <caret line="132" column="42" selection-start-line="132" selection-start-column="42" selection-end-line="132" selection-end-column="42" />
+        <state relative-caret-position="118">
+          <caret line="134" column="51" selection-start-line="134" selection-start-column="51" selection-end-line="134" selection-end-column="51" />
           <folding>
             <element signature="e#0#19#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/main.cpp">
+    <entry file="file://$PROJECT_DIR$/type.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-290">
-          <caret line="672" column="28" selection-start-line="672" selection-start-column="28" selection-end-line="672" selection-end-column="28" />
+        <state relative-caret-position="240">
+          <caret line="53" column="5" lean-forward="true" selection-start-line="53" selection-start-column="5" selection-end-line="53" selection-end-column="5" />
+          <folding>
+            <element signature="e#0#17#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/tacdef.h">
+    <entry file="file://$PROJECT_DIR$/type.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="16">
-          <caret line="257" column="19" selection-start-line="257" selection-start-column="19" selection-end-line="257" selection-end-column="19" />
-          <folding>
-            <element signature="e#40#58#0" expanded="true" />
-          </folding>
+        <state relative-caret-position="-545">
+          <caret line="81" column="6" selection-start-line="81" selection-start-column="6" selection-end-line="81" selection-end-column="6" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/tacgenerator.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="268">
-          <caret line="532" column="94" selection-start-line="532" selection-start-column="94" selection-end-line="532" selection-end-column="94" />
+        <state relative-caret-position="116">
+          <caret line="1238" column="26" selection-start-line="1238" selection-start-column="26" selection-end-line="1238" selection-end-column="26" />
           <folding>
             <element signature="e#0#25#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/main.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="148">
+          <caret line="483" column="34" selection-start-line="483" selection-start-column="34" selection-end-line="483" selection-end-column="34" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/mips32.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="53">
-          <caret line="148" column="2" selection-start-line="148" selection-start-column="2" selection-end-line="148" selection-end-column="2" />
+        <state relative-caret-position="2219">
+          <caret line="135" column="58" selection-start-line="135" selection-start-column="58" selection-end-line="135" selection-end-column="58" />
           <folding>
             <element signature="e#35#53#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/tacdef.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="82">
+          <caret line="57" column="13" lean-forward="true" selection-start-line="57" selection-start-column="13" selection-end-line="57" selection-end-column="13" />
+          <folding>
+            <element signature="e#40#58#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/ir2mips.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="286">
-          <caret line="326" column="5" lean-forward="true" selection-start-line="326" selection-start-column="5" selection-end-line="326" selection-end-column="5" />
+        <state relative-caret-position="72">
+          <caret line="469" column="35" selection-start-line="469" selection-start-column="35" selection-end-line="469" selection-end-column="35" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
+            <element signature="e#1846#1862#0" expanded="true" />
+            <element signature="e#2281#2300#0" expanded="true" />
+            <element signature="e#2383#2402#0" expanded="true" />
+            <element signature="e#5016#5039#0" expanded="true" />
+            <element signature="e#16506#16525#0" expanded="true" />
+            <element signature="e#16627#16646#0" expanded="true" />
           </folding>
         </state>
       </provider>

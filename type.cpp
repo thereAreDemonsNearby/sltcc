@@ -44,6 +44,16 @@ bool Type::isInteger(const std::shared_ptr<Type>& ty)
            && static_cast<BuiltInType*>(ty.get())->isInteger();
 }
 
+bool Type::isUnsignedInteger(const std::shared_ptr<Type>& ty)
+{
+    if (ty->tag() != BuiltIn) {
+        return false;
+    } else {
+        auto p = static_cast<BuiltInType*>(ty.get());
+        return p->isInteger() && p->isUnsigned();
+    }
+}
+
 bool Type::isVoid(const std::shared_ptr<Type>& ty)
 {
     return ty->tag() == BuiltIn
@@ -142,6 +152,8 @@ bool Type::isArray(const std::shared_ptr<Type>& ty)
 {
     return ty->tag() == Type::Array;
 }
+
+
 
 // null means error: incompatible type specifiers
 std::shared_ptr<BuiltInType> BuiltInType::make(SpecifierHolder spec,

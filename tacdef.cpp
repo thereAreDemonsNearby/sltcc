@@ -132,7 +132,7 @@ std::string Function::toString() const
     for (size_t i = 0; i < params.size(); ++i) {
         ret += "("s + std::to_string(i + 1) + " " + std::to_string(params[i].size)
                 + " " + std::to_string(params[i].align) + " " + (params[i].scalar ? "s" : "c")
-                +") ";
+                + (params[i].isUnsigned ? " u" : "") +") ";
     }
     ret.push_back('\n');
     for (const auto& b : basicBlocks) {
